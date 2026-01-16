@@ -1,0 +1,29 @@
+class NephilimEnvironment extends Environment;
+
+defaultproperties
+{
+     BlendingTable(0)=(FogStart=19000.000000,FogEnd=25000.000000,FogColor=(B=19,R=16),CloudColor=(G=36),AtmosphereColor=(R=8),RingColor=(G=20),SunColor=(B=94,R=101))
+     BlendingTable(1)=(FogStart=19500.000000,FogEnd=25000.000000,FogColor=(B=19,R=16),CloudColor=(G=36),AtmosphereColor=(R=8),RingColor=(G=20),SunColor=(B=94,R=101))
+     BlendingTable(2)=(FogStart=20000.000000,FogEnd=25000.000000,FogColor=(B=40),CloudColor=(B=74,R=69),AtmosphereColor=(G=14,R=13),RingColor=(B=49),SunColor=(B=94,R=101))
+     BlendingTable(3)=(FogStart=20500.000000,FogEnd=25000.000000,FogColor=(G=74),CloudColor=(G=83,R=84),AtmosphereColor=(G=29),RingColor=(G=82),SunColor=(G=134))
+     BlendingTable(4)=(FogStart=21000.000000,FogEnd=25000.000000,FogColor=(G=155),CloudColor=(B=124,G=126),AtmosphereColor=(G=54),RingColor=(G=142),SunColor=(G=155))
+     BlendingTable(5)=(FogStart=21500.000000,FogEnd=25000.000000,FogColor=(G=155),CloudColor=(B=123,G=124),AtmosphereColor=(G=61),RingColor=(G=138),SunColor=(G=165))
+     BlendingTable(6)=(FogStart=22000.000000,FogEnd=25000.000000,FogColor=(B=167),AtmosphereColor=(G=71),RingColor=(G=132),SunColor=(G=169))
+     BlendingTable(7)=(FogStart=22500.000000,FogEnd=25000.000000,FogColor=(G=155,R=154),CloudColor=(B=120,G=117),AtmosphereColor=(G=88),RingColor=(G=120),SunColor=(R=72))
+     BlendingTable(8)=(FogStart=22500.000000,FogEnd=25000.000000,FogColor=(G=161),CloudColor=(B=147),AtmosphereColor=(G=86),RingColor=(G=123),SunColor=(R=85))
+     BlendingTable(9)=(FogStart=22500.000000,FogEnd=25000.000000,FogColor=(G=165),CloudColor=(G=172),AtmosphereColor=(G=84),RingColor=(G=127),SunColor=(R=85))
+     BlendingTable(10)=(FogStart=22500.000000,FogEnd=25000.000000,FogColor=(G=168),CloudColor=(G=206),AtmosphereColor=(G=80),RingColor=(G=131),SunColor=(R=49))
+     BlendingTable(11)=(FogStart=22500.000000,FogEnd=25000.000000,FogColor=(G=168),CloudColor=(G=206),AtmosphereColor=(G=80),RingColor=(G=131),bNight=True,SunColor=(R=49))
+     BlendingTable(12)=(FogStart=22500.000000,FogEnd=25000.000000,FogColor=(G=168),CloudColor=(G=206),AtmosphereColor=(G=80),RingColor=(G=131),bNight=True,SunColor=(R=49))
+     BlendingTable(13)=(FogStart=22500.000000,FogEnd=25000.000000,FogColor=(G=168),CloudColor=(G=206),AtmosphereColor=(G=80),RingColor=(G=131),bNight=True,SunColor=(R=49))
+     BlendingTable(14)=(FogStart=22500.000000,FogEnd=25000.000000,FogColor=(G=171),CloudColor=(G=229),AtmosphereColor=(G=78),RingColor=(G=134),SunColor=(R=49))
+     BlendingTable(15)=(FogStart=22500.000000,FogEnd=25000.000000,FogColor=(G=160),CloudColor=(G=223),AtmosphereColor=(G=76),RingColor=(G=127),SunColor=(R=49))
+     BlendingTable(16)=(FogStart=22500.000000,FogEnd=25000.000000,FogColor=(G=146),CloudColor=(G=209),AtmosphereColor=(G=69),RingColor=(G=117),SunColor=(R=49))
+     BlendingTable(17)=(FogStart=22000.000000,FogEnd=25000.000000,FogColor=(G=128),CloudColor=(B=194,G=192,R=162),AtmosphereColor=(G=58),RingColor=(G=107),SunColor=(R=100))
+     BlendingTable(18)=(FogStart=21500.000000,FogEnd=25000.000000,FogColor=(G=108),CloudColor=(B=167,G=181,R=156),AtmosphereColor=(G=43),RingColor=(B=99,G=117,R=105),SunColor=(R=123))
+     BlendingTable(19)=(FogStart=21000.000000,FogEnd=25000.000000,FogColor=(R=89),CloudColor=(B=140,G=169,R=148),AtmosphereColor=(G=24,R=23),RingColor=(B=88,G=131,R=122),SunColor=(R=148))
+     BlendingTable(20)=(FogStart=20500.000000,FogEnd=25000.000000,FogColor=(B=85),CloudColor=(B=112,G=156),AtmosphereColor=(R=27),RingColor=(B=76,G=147,R=141),SunColor=(B=187))
+     BlendingTable(21)=(FogStart=20000.000000,FogEnd=25000.000000,FogColor=(B=64),CloudColor=(B=86,G=144,R=134),AtmosphereColor=(B=34),RingColor=(B=65,G=161,R=157),SunColor=(B=151))
+     BlendingTable(22)=(FogStart=19500.000000,FogEnd=25000.000000,FogColor=(B=55),CloudColor=(B=69,G=126,R=126),AtmosphereColor=(B=30,R=28),RingColor=(B=32,G=88,R=91),SunColor=(B=94,R=101))
+     BlendingTable(23)=(FogStart=19000.000000,FogEnd=25000.000000,FogColor=(B=43),CloudColor=(B=47,G=61,R=80),AtmosphereColor=(B=23,R=21),RingColor=(G=28),SunColor=(B=94,R=101))
+}

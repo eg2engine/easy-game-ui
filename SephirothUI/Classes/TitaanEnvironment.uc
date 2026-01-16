@@ -1,0 +1,29 @@
+class TitaanEnvironment extends Environment;
+
+defaultproperties
+{
+     BlendingTable(0)=(FogStart=19000.000000,FogEnd=25000.000000)
+     BlendingTable(1)=(FogStart=19500.000000,FogEnd=25000.000000)
+     BlendingTable(2)=(FogStart=20000.000000,FogEnd=25000.000000)
+     BlendingTable(3)=(FogStart=20500.000000,FogEnd=25000.000000)
+     BlendingTable(4)=(FogStart=21000.000000,FogEnd=25000.000000)
+     BlendingTable(5)=(FogStart=21500.000000,FogEnd=25000.000000)
+     BlendingTable(6)=(FogStart=22000.000000,FogEnd=25000.000000)
+     BlendingTable(7)=(FogStart=22500.000000,FogEnd=25000.000000)
+     BlendingTable(8)=(FogStart=22500.000000,FogEnd=25000.000000)
+     BlendingTable(9)=(FogStart=22500.000000,FogEnd=25000.000000)
+     BlendingTable(10)=(FogStart=22500.000000,FogEnd=25000.000000)
+     BlendingTable(11)=(FogStart=22500.000000,FogEnd=25000.000000)
+     BlendingTable(12)=(FogStart=22500.000000,FogEnd=25000.000000)
+     BlendingTable(13)=(FogStart=22500.000000,FogEnd=25000.000000)
+     BlendingTable(14)=(FogStart=22500.000000,FogEnd=25000.000000)
+     BlendingTable(15)=(FogStart=22500.000000,FogEnd=25000.000000)
+     BlendingTable(16)=(FogStart=22500.000000,FogEnd=25000.000000)
+     BlendingTable(17)=(FogStart=22000.000000,FogEnd=25000.000000)
+     BlendingTable(18)=(FogStart=21500.000000,FogEnd=25000.000000)
+     BlendingTable(19)=(FogStart=21000.000000,FogEnd=25000.000000)
+     BlendingTable(20)=(FogStart=20500.000000,FogEnd=25000.000000)
+     BlendingTable(21)=(FogStart=20000.000000,FogEnd=25000.000000)
+     BlendingTable(22)=(FogStart=19500.000000,FogEnd=25000.000000)
+     BlendingTable(23)=(FogStart=19000.000000,FogEnd=25000.000000)
+}

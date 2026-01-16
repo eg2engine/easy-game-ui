@@ -1,0 +1,29 @@
+class HumanType extends RaceType;
+
+defaultproperties
+{
+     RaceName="Human"
+     MaleHairCount=10
+     FemaleHairCount=10
+     Castles(0)="Ladianes"
+     Castles(1)="Rampaopolis"
+     Castles(2)="Delphist"
+     Stats(0)=(str=64,Dex=42,Vigor=52,White=8,Red=8,Blue=8,Yellow=8,Black=8)
+     Stats(1)=(str=64,Dex=42,Vigor=52,White=8,Red=8,Blue=8,Yellow=8,Black=8)
+     Stats(2)=(str=44,Dex=41,Vigor=53,Red=62)
+     Genders(0)="Female"
+     Genders(1)="Male"
+     HairColors(0)=(B=198,G=255,R=255,A=255)
+     HairColors(1)=(B=114,R=228,A=255)
+     HairColors(2)=(B=133,G=141,A=255)
+     HairColors(3)=(B=14,G=252,R=232,A=255)
+     HairColors(4)=(B=157,R=71,A=255)
+     HairColors(5)=(B=43,G=81,R=255,A=255)
+     HairColors(6)=(G=149,A=255)
+     HairColors(7)=(B=109,G=244,R=149,A=255)
+     HairColors(8)=(B=54,G=43,R=119,A=255)
+     HairColors(9)=(B=81,G=167,R=216,A=255)
+     DefaultJob=1
+     DefaultGender=1
+     DefaultSkillBook=2
+}
