@@ -294,6 +294,8 @@ var CPlayerEquip	IPlayerEquip;
 var DissolveDiag	DissolveDlg;		// ����â	Add ssemp
 var SephirothItem	OldDissolveItem;	// ����â Add ssemp
 
+var CCustomBrowser m_CustomBrowser;
+
 /*For Test 2009.10.27.Sinhyub*/
 /*
 	DefaultUIPosition
@@ -382,6 +384,10 @@ function OnInit()
 	//add neive : ����Ʈ ���� ǥ�� --------------------------------------------
 	m_QuestBrowser = CQuestBrowser(AddInterface("SephirothUI.CQuestBrowser"));
 	m_QuestBrowser.ShowInterface();
+	//-------------------------------------------------------------------------
+
+	m_CustomBrowser = CCustomBrowser(AddInterface("SephirothUI.CCustomBrowser"));
+	m_CustomBrowser.ShowInterface();
 	//-------------------------------------------------------------------------
 
 	// SubInventory ����
@@ -535,6 +541,25 @@ function HideMainInterface()
 		RemoveInterface(MainHud);
 		MainHud = None;
 	}
+}
+
+// 自定义信息面板接口（供外部调用）
+function SetCustomBrowserVisible(bool bVisible)
+{
+	if ( m_CustomBrowser != None )
+		m_CustomBrowser.SetVisible(bVisible);
+}
+
+function SetCustomBrowserContent(string Content, optional bool bShow)
+{
+	if ( m_CustomBrowser != None )
+		m_CustomBrowser.SetContent(Content, bShow);
+}
+
+function SetCustomBrowserCollapsed(bool bCollapsed)
+{
+	if ( m_CustomBrowser != None )
+		m_CustomBrowser.SetCollapsed(bCollapsed);
 }
 
 function bool IgnoreHide()

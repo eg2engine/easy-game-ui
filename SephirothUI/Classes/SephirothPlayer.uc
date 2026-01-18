@@ -1524,6 +1524,18 @@ event NetRecv_NotiPlayerKillMessage(string MatchName, string kill_player_Name, s
 	SephirothInterface(myHud).BattleInterface.UpdateBattleMessage(kill_player_Name, kill_player_Team, death_player_Name, death_player_Team);
 }
 
+
+simulated function SetCustomBrowserVisible(bool bVisible)
+{
+	SephirothInterface(myHud).SetCustomBrowserVisible(bVisible);
+}
+
+simulated function SetCustomBrowserContent(string content)
+{
+	SephirothInterface(myHud).SetCustomBrowserContent(content);
+}
+
+
 event NetRecv_NotiSubInvenInfoUpdate(int Index, string EndTime, int Validity, bool bCommandOpen)	
 {
 

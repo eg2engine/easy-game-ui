@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"path": "SephirothUI"
+		},
+		{
+			"path": "Sephiroth"
+		},
+		{
+			"path": "../easy-game-uspirit-hf/Core"
+		},
+		{
+			"path": "../easy-game-uspirit-hf/Effect"
+		},
+		{
+			"path": "../easy-game-uspirit-hf/Engine"
+		},
+		{
+			"path": "../easy-game-uspirit-hf/Interface"
+		},
+		{
+			"path": "../easy-game-uspirit-hf/ItemFx"
+		}
+	]
+}

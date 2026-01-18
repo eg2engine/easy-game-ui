@@ -6871,6 +6871,17 @@ event UpdateChannel(bool bForceOn, bool bLeftEar);
 
 simulated function BattleNotiPlayerKillMessage(string killPlayerName, string killPlayerTeam, string deathPlayerName, string deathPlayerTeam);
 
+/**
+ * 设置自定义UI绘制状态
+ * @param bVisible 是否可见
+ */
+simulated function SetCustomBrowserVisible(bool bVisible);
+
+/**
+ * 设置自定义UI内容
+ * @param content 内容
+ */
+simulated function SetCustomBrowserContent(string content);
 
 event OnUpdatePkPts(int type, int value)		
 {

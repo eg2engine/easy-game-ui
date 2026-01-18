@@ -14,6 +14,10 @@ var const int CMD_C2S_EtcInfo_Update;
 //战场信息
 var const int CMD_S2C_Battle_NotiPlayerKillMessage;
 
+//自定义UI信息
+var const int CMD_S2C_CustomBrowser_Status;
+var const int CMD_S2C_CustomBrowser_Content;
+
 
 
 function DebugLog(string message)
@@ -57,6 +61,22 @@ function CustomMessage_CMD_S2C_Battle_NotiPlayerKillMessage(int parm1, int parm2
 }
 
 
+function CustomMessage_CMD_S2C_CustomBrowser_Status(int parm1, int parm2, string body)
+{
+	local bool bVisible;
+	if( parm1 == 1 )
+		bVisible = True;
+	else
+		bVisible = False;
+
+	GameManager(Outer).PlayerOwner.SetCustomBrowserVisible(bVisible);
+}
+
+function CustomMessage_CMD_S2C_CustomBrowser_Content(int parm1, int parm2, string body)
+{
+	GameManager(Outer).PlayerOwner.SetCustomBrowserContent(body);
+}
+
 function bool HandleReceivedCustomMessage(int puslCmd, int cmd, int parm1, int parm2, string body)
 {
 
@@ -78,6 +98,12 @@ function bool HandleReceivedCustomMessage(int puslCmd, int cmd, int parm1, int p
 			return True;
 		case CMD_S2C_Battle_NotiPlayerKillMessage:
 			CustomMessage_CMD_S2C_Battle_NotiPlayerKillMessage(parm1, parm2, body);
+			return True;
+		case CMD_S2C_CustomBrowser_Status:
+			CustomMessage_CMD_S2C_CustomBrowser_Status(parm1, parm2, body);
+			return True;
+		case CMD_S2C_CustomBrowser_Content:
+			CustomMessage_CMD_S2C_CustomBrowser_Content(parm1, parm2, body);
 			return True;
 		default:
 			break;
@@ -115,8 +141,6 @@ function NetNotiCustom(int cmd, int param1, int param2, string body)
 }
 
 
-
-
 defaultproperties
 {
 	CMD_S2C_GameShop_Open=100001
@@ -128,4 +152,7 @@ defaultproperties
 
 
 	CMD_S2C_Battle_NotiPlayerKillMessage=10040
+
+	CMD_S2C_CustomBrowser_Status=10060
+	CMD_S2C_CustomBrowser_Content=10061
 }
