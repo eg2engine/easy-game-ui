@@ -1504,7 +1504,7 @@ event NetRecv_NotiEndMatch(string MatchName, int Result, int MatchWaitQuitTime)
 {
 	SephirothInterface(myHud).BattleInterface.HideBattleScore();
 	SephirothInterface(myHud).BattleInterface.HideBattleWaitTimer();
-	SephirothInterface(myHud).BattleInterface.ShowBattleEndingEffecter(MatchName,Result);
+	//SephirothInterface(myHud).BattleInterface.ShowBattleEndingEffecter(MatchName,Result);
 	SephirothInterface(myHud).ChannelMgr.SetChannelMode(0);
 	//SephirothInterface(myHud).BattleInterface.ShowBattleQuitMessage(MatchName, 15);
 }

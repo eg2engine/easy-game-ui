@@ -228,6 +228,10 @@ function ParseContent()
 	local RichLine Line;
 	local string RawLine;
 	local string NormalizedContent;
+	local bool bWasCollapsed;	// 保存当前的折叠状态，避免更新内容时自动展开
+
+	// 保存当前的折叠状态，避免更新内容时自动展开
+	bWasCollapsed = bCollapsed;
 
 	// 先将所有换行符替换为 |，统一处理
 	NormalizedContent = ReplaceNewlinesWithPipe(RawContent);
@@ -244,8 +248,8 @@ function ParseContent()
 	}
 
 	// 查找 [F] 折叠标记行（全局只有一个）
+	
 	TitleLineIndex = -1;
-	bCollapsed = False;	// 默认展开
 	for ( i = 0; i < ParsedLines.Length; i++ )
 	{
 		if ( ParsedLines[i].bTitle )
@@ -261,14 +265,20 @@ function ParseContent()
 				ParsedLines[i].bTitle = False;
 				// 如果颜色是 ColorTitle（只有[F]标记），则改为默认白色
 				if ( ParsedLines[i].LineColor.R == ColorTitle.R && 
-				     ParsedLines[i].LineColor.G == ColorTitle.G && 
-				     ParsedLines[i].LineColor.B == ColorTitle.B )
+					ParsedLines[i].LineColor.G == ColorTitle.G && 
+					ParsedLines[i].LineColor.B == ColorTitle.B )
 				{
 					ParsedLines[i].LineColor = ColorWhite;
 				}
 			}
 		}
 	}
+	
+	// 如果找到了折叠标记，保持之前的折叠状态；如果没有折叠标记，默认展开
+	if ( TitleLineIndex == -1 )
+		bCollapsed = False;	// 没有折叠标记时，默认展开
+	else
+		bCollapsed = bWasCollapsed;	// 有折叠标记时，保持之前的折叠状态
 }
 
 function string GetLinePlainText(RichLine Line)
@@ -508,19 +518,24 @@ function string ReplaceNewlinesWithPipe(string S)
 	local int i;
 	local string Ch;
 	local string NextCh;
+	local string CR, LF;
+
+	// 使用 Chr() 函数获取换行符（UE2 可能不支持 \r 和 \n 转义序列）
+	CR = Chr(13);  // 回车符 \r
+	LF = Chr(10);  // 换行符 \n
 
 	// 将所有换行符（\n、\r\n、\r）替换为 |
 	Result = "";
 	for ( i = 0; i < Len(S); i++ )
 	{
 		Ch = Mid(S, i, 1);
-		if ( Ch == "\r" )
+		if ( Ch == CR )
 		{
 			// 处理 \r\n 或单独的 \r
 			if ( i + 1 < Len(S) )
 			{
 				NextCh = Mid(S, i + 1, 1);
-				if ( NextCh == "\n" )
+				if ( NextCh == LF )
 				{
 					// \r\n 组合，替换为 |
 					Result = Result$"|";
@@ -531,7 +546,7 @@ function string ReplaceNewlinesWithPipe(string S)
 			// 单独的 \r，替换为 |
 			Result = Result$"|";
 		}
-		else if ( Ch == "\n" )
+		else if ( Ch == LF )
 		{
 			// Unix 换行符，替换为 |
 			Result = Result$"|";
@@ -577,10 +592,16 @@ function array<string> SplitByPipe(string S)
 
 function string TrimLine(string S)
 {
+	local string CR, LF;
+
+	// 使用 Chr() 函数获取换行符（UE2 可能不支持 \r 和 \n 转义序列）
+	CR = Chr(13);  // 回车符 \r
+	LF = Chr(10);  // 换行符 \n
+
 	// 去除首尾空格与换行符
 	while ( Len(S) > 0 && (Left(S, 1) == " ") )
 		S = Mid(S, 1);
-	while ( Len(S) > 0 && (Right(S, 1) == " " || Right(S, 1) == "\r" || Right(S, 1) == "\n") )
+	while ( Len(S) > 0 && (Right(S, 1) == " " || Right(S, 1) == CR || Right(S, 1) == LF) )
 		S = Left(S, Len(S) - 1);
 	return S;
 }
