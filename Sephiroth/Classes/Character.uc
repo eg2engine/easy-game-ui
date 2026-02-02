@@ -592,7 +592,6 @@ state NetState_JustDead
 
 	function BeginState()
 	{
-//		//Log(Self @ GetStateName() @ "BeginState");
 		if (IsA('Creature') && Controller != None && !Controller.bDeleteMe) 
 		{
 			Controller.SetLocation(Location);
@@ -601,32 +600,41 @@ state NetState_JustDead
 		bJustDamaged = False;
 		bIsDead = True;
 
-		//if (IsA('Monster'))
-		//	SetTimer(6, false);
-		//else
-		//	SetTimer(4, false);
 		SetTimer(4, False);
 
 		Velocity = vect(0,0,0);
 		Acceleration = vect(0,0,0);
+
+		// 只有玩家角色死亡时播放特效（绿色气泡上升）
+		if (IsA('Hero'))
+		{
+			SetPhysics(PHYS_None);
+			Spawn(class<Actor>(DynamicLoadObject("Effect.DieE", class'Class')), , , Location, Rotation);
+		}
+
 		CHAR_PlayAnim('Die',1);
 		SetCollision(False, False, False);
 		SetAnimFrame(0);
 	}
 	function EndState()
 	{
-//		//Log(Self @ GetStateName() @ "EndState");
-//		CHAR_TweenToWaiting(0);
-//		CHAR_PlayWaiting();
 		CHAR_PlayAnim(BasicAnim[0],1);
 		bIsDead = False;
-//		SetCollision(true, true, true);
 	}
 	function Timer()
 	{
 		if (IsA('Monster'))
 			Destroy();
 	}
+}
+
+/**
+ * 调试日志输出
+ * @param message 要输出的消息
+ */
+function DebugLog(string message)
+{
+	Level.GetLocalPlayerController().myHud.AddMessage(1,"DebugLog ClientController: "@message,class'Canvas'.Static.MakeColor(128,255,255));
 }
 
 state NetState_WasDead extends NetState_JustDead

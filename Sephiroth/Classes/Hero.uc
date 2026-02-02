@@ -818,7 +818,7 @@ function DisplayEquipment(Canvas Canvas, out float YL, out float YPos)
 
 function DebugLog(string message)
 {
-	ClientController(Controller).myHud.AddMessage(1,"Debug GameCustomCmdManager Handle Len: "@message,class'Canvas'.Static.MakeColor(128,255,255));
+	Level.GetLocalPlayerController().myHud.AddMessage(1,"DebugLog Hero: "@message,class'Canvas'.Static.MakeColor(128,255,255));
 }
 
 exec function TestAct2(name action)

@@ -659,7 +659,7 @@ event SetNpcInfo(int nIndex)
 
 function DebugLog(string message)
 {
-	PlayerController(Controller).myHud.AddMessage(1,"DebugLog Creature: "@message,class'Canvas'.Static.MakeColor(128,255,255));
+	Level.GetLocalPlayerController().myHud.AddMessage(1,"DebugLog Creature: "@message,class'Canvas'.Static.MakeColor(128,255,255));
 }
 
 
