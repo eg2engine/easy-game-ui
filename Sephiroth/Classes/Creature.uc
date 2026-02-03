@@ -188,6 +188,10 @@ event NetRecv_PlayMelee(name GivenMelee,optional float GivenAnimRate,optional fl
 	local float AnimRate,TweenTime;
 	local name AnimName;
 
+	// 死亡状态下忽略近战动画同步
+	if (bIsDead)
+		return;
+
 	//Log(Self@"NetRecv_PlayMelee"@GivenMelee@GivenAnimRate@GivenTweenTime);
 	//Log("TEST TEST PlayMelee");
 	if ( GivenMelee == '' || GivenMelee == 'None' ) 
@@ -227,6 +231,10 @@ event NetRecv_ActRange(Skill Skill, name GivenRange,float GivenAnimRate, float G
 	local name AnimName;
 	local class<Actor> MobFxClass;
 	local Actor MobFx;
+
+	// 死亡状态下忽略远程动画同步
+	if (bIsDead)
+		return;
 
 	if ( GivenRange == '' || GivenRange == 'None' )
 	{
@@ -287,6 +295,10 @@ event NetRecv_Cast(Skill Skill, Actor TargetActor, vector TargetLocation, float 
 	local name AnimName;
 	local int i;
 
+	// 死亡状态下忽略施法动画同步
+	if (bIsDead)
+		return;
+
 	i = Rand(MagicActAnims.Length);
 	AnimName = MagicActAnims[i].SeqName;
 	if ( AnimName == '' )
@@ -325,6 +337,10 @@ event NetRecv_Fire(Skill Skill, Actor TargetActor, vector TargetLocation)
 	local rotator AimRotation;		// 瞄准旋转角度
 	local int i;						// 循环计数器（用于多发射物）
 	local float rot;					// 角度偏移量（用于多发射物扇形分布）
+
+	// 死亡状态下忽略技能发射同步
+	if (bIsDead)
+		return;
 
 	// ========== 第一步：生成施法特效 ==========
 	// 如果技能配置了施法特效类（CastClass），在怪物位置生成施法特效
@@ -451,6 +467,10 @@ function FireRange()
 
 function PlayPain()
 {
+	// 死亡状态下忽略疼痛动画
+	if (bIsDead)
+		return;
+
 	SetActionStage(STAGE_None);
 	Super.PlayPain();
 	

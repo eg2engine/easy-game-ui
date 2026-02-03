@@ -588,7 +588,14 @@ state NetState_JustDead
 	CHAR_PlayerWalkingAnim,
 	AnimEnd,
 	CHAR_TweenToWaiting,
-	CHAR_PlayWaiting;
+	CHAR_PlayWaiting,
+	PlayPain;
+
+	// 死亡状态下忽略受伤事件
+	event Damaged(Pawn Attacker, Skill Skill, bool bPain, bool bKnockback, bool bCritical, bool bMiss, bool bBlock, bool bImmune) {}
+	
+	// 死亡状态下忽略近战触碰事件
+	event MeleeTouch(actor Other, vector HitLocation, vector HitNormal) {}
 
 	function BeginState()
 	{
