@@ -19,6 +19,9 @@ var const int CMD_S2C_CustomBrowser_Status;
 var const int CMD_S2C_CustomBrowser_Content;
 
 
+//物品
+var const int CMD_S2C_Item_UpdateNumber;
+
 
 function DebugLog(string message)
 {
@@ -77,6 +80,19 @@ function CustomMessage_CMD_S2C_CustomBrowser_Content(int parm1, int parm2, strin
 	GameManager(Outer).PlayerOwner.SetCustomBrowserContent(body);
 }
 
+function CustomMessage_CMD_S2C_Item_UpdateNumber(int parm1, int parm2, string body)
+{
+	local array<string> ItemDatas;
+
+	Split(body, "$", ItemDatas);
+
+	if (ItemDatas.Length < 4)
+		return;
+
+	// ItemDatas[0]=背包编号  ItemDatas[1]=X  ItemDatas[2]=Y  ItemDatas[3]=新数量
+	GameManager(Outer).PlayerOwner.PSI.UpdateItemAmountByPos(int(ItemDatas[0]), int(ItemDatas[1]), int(ItemDatas[2]), int(ItemDatas[3]));
+}
+
 function bool HandleReceivedCustomMessage(int puslCmd, int cmd, int parm1, int parm2, string body)
 {
 
@@ -104,6 +120,9 @@ function bool HandleReceivedCustomMessage(int puslCmd, int cmd, int parm1, int p
 			return True;
 		case CMD_S2C_CustomBrowser_Content:
 			CustomMessage_CMD_S2C_CustomBrowser_Content(parm1, parm2, body);
+			return True;
+		case CMD_S2C_Item_UpdateNumber:
+			CustomMessage_CMD_S2C_Item_UpdateNumber(parm1, parm2, body);
 			return True;
 		default:
 			break;
@@ -155,4 +174,7 @@ defaultproperties
 
 	CMD_S2C_CustomBrowser_Status=10060
 	CMD_S2C_CustomBrowser_Content=10061
+
+
+	CMD_S2C_Item_UpdateNumber=100080
 }

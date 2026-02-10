@@ -255,6 +255,34 @@ var int nWaitingAttackResultCnt;		//add neive : ���� ���� ��
 // (cpptext)
 // (cpptext)
 
+// 通过背包编号和坐标查找道具
+// BagIndex: 0=主背包, 1~N=辅助背包(SubInventories[BagIndex-1]), -1=宠物背包
+function SephirothItem FindItemByPos(int BagIndex, int X, int Y)
+{
+	if (BagIndex == 0)
+		return SepInventory.FindItem(X, Y);
+	else if (BagIndex >= 1 && BagIndex <= SubInventories.Length)
+		return SubInventories[BagIndex - 1].FindItem(X, Y);
+	else if (BagIndex == -1 && PetInventory != None)
+		return PetInventory.FindItem(X, Y);
+
+	return None;
+}
+
+// 通过背包编号和坐标更新道具数量，同时同步快捷栏
+function UpdateItemAmountByPos(int BagIndex, int X, int Y, int NewAmount)
+{
+	local SephirothItem Item;
+
+	Item = FindItemByPos(BagIndex, X, Y);
+
+	if (Item != None && Item.HasAmount())
+	{
+		Item.Amount = NewAmount;
+		ItemAmountUpdate(Item);
+	}
+}
+
 //@by wj(12/02)------
 event ItemAmountUpdate(SephirothItem Item)
 {
