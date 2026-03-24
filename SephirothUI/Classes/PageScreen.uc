@@ -68,7 +68,9 @@ function LoadOption()
 	EffectDetail = int(ConsoleCommand("get ini:Engine.Engine.ViewportManager EffectDetail"));
 	Font = Parent.Controller.HudInterface.LastFont;		//modified by yj
 	UItype = int(ConsoleCommand("GETOPTIONI UIType"));
-	bShowDeadEffect = bool(ConsoleCommand("GETOPTIONI ShowDeadEffect"));
+	// 强制关闭怪物死亡特效选项（不再从配置中恢复）
+	bShowDeadEffect = False;
+	//bShowDeadEffect = bool(ConsoleCommand("GETOPTIONI ShowDeadEffect"));
 	Super.LoadOption();
 }
 
@@ -128,7 +130,8 @@ function SaveOption()
 	
 
 	SephirothInterface(SephirothPlayer(PlayerOwner).myHUD).ChangeUIType(UIType);  //modified by yj
-	ConsoleCommand("SETOPTIONB ShowDeadEffect"@bShowDeadEffect);			//add neive : ��� ����Ʈ ����
+	// 强制将配置中的 ShowDeadEffect 写为 False，保持与逻辑一致
+	ConsoleCommand("SETOPTIONB ShowDeadEffect False");			//add neive : ��� ����Ʈ ����
 	ConsoleCommand("SETOPTIONI UIType"@UIType);
 	ConsoleCommand("SETOPTIONB OptimalFullscreen"@bOptimalFullscreen);	//2009.11.10.Sinhyub
 	ConsoleCommand("SETOPTIONB Fullscreen"@bFullscreen);
@@ -302,6 +305,9 @@ function UpdateComponents()
 		Components[2].bDisabled = True;
 	}
 
+	// 强制关闭怪物死亡特效：禁用对应复选框组件
+	Components[13].bDisabled = True;
+
 	Components[14].bDisabled = True;
 	// --- jjh
 	if( bool(ConsoleCommand("GETOPTIONI UseD3DCursor")) )
@@ -404,8 +410,11 @@ function NotifyComponent(int CmpId,int NotifyId,optional string Command)
 				shadowtype = 2; break;
 		}
 	}
-	else if(NotifyID == CB_ShowDeadEffect)
-		bShowDeadEffect = !bShowDeadEffect;
+		else if(NotifyID == CB_ShowDeadEffect)
+		{
+			// 强制关闭怪物死亡特效：忽略 UI 点击，始终保持为 False
+			bShowDeadEffect = False;
+		}
 	else if(NotifyID == Check_Cursor)
 	{	
 		//Cursor rendering Option

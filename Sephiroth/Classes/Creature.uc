@@ -496,7 +496,9 @@ event DeadTimer(float AfterDeadTime)
 	{
 		if ( !bStyleCreated )
 		{
-			bShowDeadFx = bool(ConsoleCommand("GETOPTIONI ShowDeadEffect"));
+			// 强制关闭怪物死亡特效（不再读取配置）
+			bShowDeadFx = False;
+			//bShowDeadFx = bool(ConsoleCommand("GETOPTIONI ShowDeadEffect"));
 			//if(bShowDeadFx)
 			//	return;
 			CreateStyle();
