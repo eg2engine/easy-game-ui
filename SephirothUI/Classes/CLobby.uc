@@ -10,6 +10,8 @@ const BN_Delete=3;
 const BN_New=4;
 const BN_Option=5;
 const BN_Quit=6;
+const BN_Rename=12;
+const RENAME_CREATECHARACTER_SUIT="__RENAME__";
 
 const BN_CharA=7;
 const BN_CharB=8;
@@ -23,7 +25,9 @@ const IDM_QuitGame=2;
 const IDM_JobChange=3;
 const IDM_ConfirmBare=4;
 const IDM_ConfirmOneHand=5;
+const IDM_RenameCharacterSuccess=6;
 const IDS_DeleteCharacter = 6;
+const IDS_RenameCharacter = 7;
 
 var config BackgroundData BkgData[10];
 
@@ -44,6 +48,12 @@ var float PingTime;
 // 当前选中角色的索引与名称
 var int nSelectedCharacter;
 var string sSelectedCharacterName;
+var int nRenameCharacter;
+var string sRenameCharacterName;
+var bool bRenameCharacterPending;
+var string sPendingRenameNewName;
+var int nRenameDisplayCharacter;
+var string sRenameDisplayName;
 
 var float m_LastDeleteTime;	// 控制删除角色的冷却时间
 
@@ -59,6 +69,7 @@ function OnInit()
 	SetComponentNotify(Components[1],BN_Start,Self);
 	SetComponentNotify(Components[2],BN_New,Self);
 	SetComponentNotify(Components[3],BN_Delete,Self);
+	SetComponentNotify(Components[4],BN_Rename,Self);
 //	SetComponentNotify(Components[4],BN_Back,Self);
 //	SetComponentNotify(Components[5],BN_Option,Self);
 	SetComponentNotify(Components[6],BN_Quit,Self);
@@ -88,6 +99,7 @@ function OnInit()
 	SetComponentTextureID(Components[1], 0, 1, 3, 2);
 	SetComponentTextureID(Components[2], 0, 1, 3, 2);
 	SetComponentTextureID(Components[3], 0, 1, 3, 2);
+	SetComponentTextureID(Components[4], 0, 1, 3, 2);
 	SetComponentTextureID(Components[6], 4, 5, 7, 6);
 
 	SetComponentTextureID(Components[7], 8, -1, 10, 10);
@@ -187,6 +199,7 @@ function Layout(Canvas C)
 
 	// 摆放主按钮
 	MoveComponent(Components[1],true,cx + 19, cy + Components[0].YL - Components[1].YL - 19);
+	MoveComponent(Components[4],true,cx + 19, Components[1].Y - Components[4].YL - 6);
 	MoveComponent(Components[2],true,cx + Components[0].XL - Components[2].XL - 19,
 										cy + Components[0].YL - Components[2].YL - 19);
 	MoveComponent(Components[3],true,cx + 19, cy + Components[0].YL + 10);
@@ -233,6 +246,7 @@ function OnPreRender(Canvas C)
 	EnableComponent(Components[1],nSelectedCharacter != -1 && bLoaded);
 	EnableComponent(Components[2],HeroCount < MAX_CREATE_PLAYER_NUM && bLoaded);
 	EnableComponent(Components[3],nSelectedCharacter != -1 && bLoaded);
+	EnableComponent(Components[4],nSelectedCharacter != -1 && bLoaded);
 	//EnableComponent(Components[4],bool(ConsoleCommand("ISAUTHCONNECT")) == false);
 }
 
@@ -292,6 +306,8 @@ function OnPostRender(HUD H, Canvas C)
 		}
 
 		sCharName = ConsoleCommand("GetCharName " $ (i-BN_CharA));
+		if (i-BN_CharA == nRenameDisplayCharacter && sRenameDisplayName != "")
+			sCharName = sRenameDisplayName;
 
 		alpha = 100;
 		if(i-BN_CharA == nSelectedCharacter)	// 当前槽位已被选中
@@ -357,6 +373,9 @@ function NotifyComponent(int ComponentId, int NotifyId, optional string Command)
 		break;
 	case BN_Delete:
 		OnDeleteDialog();
+		break;
+	case BN_Rename:
+		OnRenameDialog();
 		break;
 	case BN_Back:
 		ReturnToLogin();
@@ -472,10 +491,100 @@ function OnDeleteDialog()
 function DeleteCharacter()
 {
 	PlayerOwner.ConsoleCommand("DELETECHARACTER "$sSelectedCharacterName);
+	if (nRenameDisplayCharacter == nSelectedCharacter)
+	{
+		nRenameDisplayCharacter = -1;
+		sRenameDisplayName = "";
+	}
 	sSelectedCharacterName = "";
 	SelectedHero = None;
 	ResetSelectCharacter();
 	m_LastDeleteTime = Level.Second;	// 删除后记录时间，防止连续删除触发异常
+}
+
+// 打开当前选中角色的改名输入框。
+function OnRenameDialog()
+{
+	local string Title;
+
+	if (nSelectedCharacter < 0 || sSelectedCharacterName == "")
+		return;
+
+	nRenameCharacter = nSelectedCharacter;
+	sRenameCharacterName = sSelectedCharacterName;
+
+	Title = Localize("LobbyMenu","RenameCharacter","SephirothUI");
+
+	class'CEditBox'.static.EditBox(Self,"RenameCharacter",Title,IDS_RenameCharacter,20,sRenameCharacterName);
+}
+
+// 大厅内复用的新角色名校验逻辑。
+function bool CheckValidName(string Name)
+{
+	local int NameLen, Space;
+	local string ErrorString;
+
+	NameLen = StrLen(Name);
+	if (NameLen < 2 || NameLen > 20)
+		ErrorString = Localize("LobbyMenu","InvalidCharacterNameLength","SephirothUI");
+	Space = InStr(Name," ");
+	if (Space != -1)
+		ErrorString = Localize("LobbyMenu","InvalidCharacterNameSpace","SephirothUI");
+	if (bool(PlayerOwner.ConsoleCommand("CHECKNAMEVALID" @ Name)))
+		ErrorString = Localize("LobbyMenu","PlayerWrongName","SephirothUI");
+	if (ErrorString != "") {
+		class'CMessageBox'.static.MessageBox(Self,"InvalidCharacterName",ErrorString,MB_Ok);
+		return false;
+	}
+	return true;
+}
+
+// 改名请求预留给协议层接入。
+function RequestRenameCharacter(string OldName, string NewName)
+{
+	local string RaceName, SexValue, HairName, FaceName, JobName;
+
+	RaceName = "Human";
+	SexValue = "1";
+	HairName = "HairHM1";
+	FaceName = "FaceHM1";
+	JobName = "OneHand";
+
+	bRenameCharacterPending = true;
+	sPendingRenameNewName = NewName;
+
+	ConsoleCommand("CREATECHARACTER"
+		$" "$NewName
+		$" "$RaceName
+		$" "$SexValue
+		$" "$HairName
+		$" "$FaceName
+		$" "$RENAME_CREATECHARACTER_SUIT
+		$" "$JobName
+		$" "$OldName
+		);
+}
+
+
+// 处理改名回包，成功后先本地覆盖大厅显示名。
+function HandleRenameCharacterResult(string Result)
+{
+	bRenameCharacterPending = false;
+
+	if (Result == "Success" || Result == Localize("Modals","UnknownNewAvaFailure","Sephiroth"))
+	{
+		nRenameDisplayCharacter = nRenameCharacter;
+		sRenameDisplayName = sPendingRenameNewName;
+		sSelectedCharacterName = sPendingRenameNewName;
+		sRenameCharacterName = sPendingRenameNewName;
+		sPendingRenameNewName = "";
+
+		class'CMessageBox'.static.MessageBox(Self,"CharacterNameUpdate",Localize("Modals","UpdatePlayerNameSucess","Sephiroth"),MB_Ok);
+		return;
+	}
+
+	sPendingRenameNewName = "";
+	class'CMessageBox'.static.MessageBox(Self,"InvalidCharacterNameUpdate",Result,MB_Ok);
 }
 
 // 返回登录界面并断开当前连接
@@ -517,6 +626,16 @@ function NotifyEditBox(CInterface Interface,int NotifyId,string EditText)
 		else
 			class'CMessageBox'.static.MessageBox(Self,"WrongInput",Localize("Modals","WrongInput","Sephiroth"),MB_YesNo,IDM_DeleteCharacter);		// IDM_DeleteCharacter 在此仅用于提示
 	}
+	else if (NotifyId == IDS_RenameCharacter && EditText != "")
+	{
+		if (nRenameCharacter < 0 || sRenameCharacterName == "")
+			return;
+		if (EditText == sRenameCharacterName)
+			return;
+		if (!CheckValidName(EditText))
+			return;
+		RequestRenameCharacter(sRenameCharacterName, EditText);
+	}
 
 }
 
@@ -529,6 +648,9 @@ function NotifyInterface(CInterface Interface,EInterfaceNotifyType NotifyId,opti
 		NotifyValue = int(Command);
 		switch (NotifyValue)
 		{
+		case IDM_RenameCharacterSuccess:
+			ReturnToLogin();
+			break;
 		case IDM_QuitGame:
 			PlayerOwner.ConsoleCommand("Quit");
 			break;
@@ -556,6 +678,13 @@ function NotifyInterface(CInterface Interface,EInterfaceNotifyType NotifyId,opti
 // 创建角色界面的回调：成功则关闭窗口，否则提示错误
 function NewCharacterResult(string Result)
 {
+	
+	if (bRenameCharacterPending)
+	{
+		HandleRenameCharacterResult(Result);
+		return;
+	}
+
 	if (NewCharacter != None && !NewCharacter.bDeleteMe) {
 		if (Result == "Success") {
 			bHideAllComponets = false;
@@ -581,6 +710,9 @@ function StartPlayResult(string Result)
 // 断线提示处理
 function OnDisconnected(optional string Result)
 {
+	bRenameCharacterPending = false;
+	sPendingRenameNewName = "";
+
 	if (Result == "" && !bAlreadyDisconnected)
 		class'CMessageBox'.static.MessageBox(Self,"Disconnected",Localize("Modals","Disconnected","Sephiroth"),MB_Ok,IDM_QuitGame);
 	else
@@ -611,10 +743,12 @@ function Render(Canvas C)
 defaultproperties
 {
      nSelectedCharacter=-1
+     nRenameDisplayCharacter=-1
      Components(0)=(XL=160.000000,YL=200.000000)
      Components(1)=(Id=1,Caption="StartGame",Type=RES_PushButton,XL=157.000000,YL=44.000000,OffsetXL=20.000000,OffsetYL=38.000000,TextAlign=TA_MiddleCenter,LocType=LCT_User,LocalizeSection="LobbyMenu")
      Components(2)=(Id=2,Caption="NewCharacter",Type=RES_PushButton,XL=157.000000,YL=44.000000,OffsetYL=1.000000,TextAlign=TA_MiddleCenter,LocType=LCT_User,LocalizeSection="LobbyMenu")
      Components(3)=(Id=3,Caption="DeleteCharacter",Type=RES_PushButton,XL=157.000000,YL=44.000000,OffsetYL=1.000000,TextAlign=TA_MiddleCenter,LocType=LCT_User,LocalizeSection="LobbyMenu")
+     Components(4)=(Id=4,Caption="RenameCharacter",Type=RES_PushButton,XL=157.000000,YL=44.000000,OffsetYL=1.000000,TextAlign=TA_MiddleCenter,LocType=LCT_User,LocalizeSection="LobbyMenu")
      Components(6)=(Id=6,Caption="QuitGame",Type=RES_PushButton,XL=157.000000,YL=44.000000,OffsetYL=1.000000,TextAlign=TA_MiddleCenter,LocType=LCT_User,LocalizeSection="LobbyMenu",HotKey=IK_Escape)
      Components(7)=(Id=7,Type=RES_PushButton,XL=322.000000,YL=62.000000,LocType=LCT_User)
      Components(8)=(Id=8,Type=RES_PushButton,XL=322.000000,YL=62.000000,LocType=LCT_User)
