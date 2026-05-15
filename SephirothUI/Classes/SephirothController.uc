@@ -321,6 +321,11 @@ function TraceAndMakeContextEx(out TraceContext TC, float DirectionalScale, Acto
 	local Actor ClosestEnemy;					// 最近的敌方Actor
 	local vector ClosestEnemyLoc;				// 最近的敌方位置
 	local vector ClosestEnemyNorm;				// 最近的敌方法线
+	local bool bFoundHero;
+	local float ClosestHeroDistance;
+	local Actor ClosestHero;
+	local vector ClosestHeroLoc;
+	local vector ClosestHeroNorm;
 
 	// ========== 第一步：获取射线起点和方向 ==========
 	// 使用玩家/摄像机的当前位置作为射线追踪的起点
@@ -362,6 +367,48 @@ function TraceAndMakeContextEx(out TraceContext TC, float DirectionalScale, Acto
 	// 性能最优路径：直接返回第一个目标，无需额外追踪
 	if ( FirstFilterResult == FR_Attackable )
 	{
+		// Large monster models can cover nearby heroes. When the first hit is a monster,
+		// keep scanning the same ray and prefer the nearest hero behind it.
+		if ( FirstActor.IsA('Monster') )
+		{
+			bFoundHero = False;
+			ClosestHero = None;
+			ClosestHeroDistance = 999999.0;
+
+			foreach ViewportOwner.Actor.TraceActors(class'Actor', HitActor, HitLoc, HitNorm,
+			ViewOrigin + DirectionalScale * Direction, ViewOrigin)
+			{
+				if ( HitActor == FirstActor )
+					continue;
+
+				HitDistance = VSize(HitLoc - ViewOrigin);
+
+				if ( HitDistance <= FirstDistance )
+					continue;
+
+				if ( HitActor.IsA('Hero') && HitActor != ViewportOwner.Actor.Pawn && !Character(HitActor).bIsDead )
+				{
+					if ( !bFoundHero || HitDistance < ClosestHeroDistance )
+					{
+						ClosestHero = HitActor;
+						ClosestHeroLoc = HitLoc;
+						ClosestHeroNorm = HitNorm;
+						ClosestHeroDistance = HitDistance;
+						bFoundHero = True;
+					}
+				}
+			}
+
+			if ( bFoundHero )
+			{
+				TC.Actor = ClosestHero;
+				TC.Location = ClosestHeroLoc;
+				TC.Normal = ClosestHeroNorm;
+				TC.Dirty = False;
+				return;
+			}
+		}
+
 		TC.Actor = FirstActor;
 		TC.Location = FirstHitLoc;
 		TC.Normal = FirstHitNorm;
@@ -1607,12 +1654,12 @@ auto state Standing
 		}
 
 		// ȣ���� ���� ������, �׳Ѱ� ���;׼� ����.
-		if (IsValidContext(HoverContext))
+		if (IsValidContext(HoverContext) && !HoverContext.Actor.IsA('Monster'))
 			CopyContext(TC, HoverContext);
 		// ������, ���� ����� �׳Ѱ� ���;׼� ����.
 		else 
 		{
-			TraceAndMakeContext(TC, 5000, TCST_Click);
+			TraceAndMakeContextEx(TC, 5000, TCST_Click);
 		}
 
 		if (IsValidContext(TC)) 
@@ -1952,11 +1999,11 @@ state Lockup extends LockupBase
 		// ���⼭�� �� � ���ؽ�Ʈ�� ��Ʈ�ѷ����� �ѱ��� �ʰ� �ٸ�
 		// LockupReleasing ���·� �����ϰ� ����.
 
-		if (IsValidContext(HoverContext, CancelDelta))
+		if (IsValidContext(HoverContext, CancelDelta) && !HoverContext.Actor.IsA('Monster'))
 			CopyContext(TC, HoverContext);
 		else 
 		{
-			TraceAndMakeContext(TC, 5000, TCST_Click);
+			TraceAndMakeContextEx(TC, 5000, TCST_Click);
 		}
 
 		if (IsValidContext(TC)) 
@@ -2020,7 +2067,7 @@ state LockupReleasing extends LockupBase
 			return;
 
 
-		TraceAndMakeContext(TC, 5000, TCST_Click);
+		TraceAndMakeContextEx(TC, 5000, TCST_Click);
 
 		if (IsValidContext(TC)) 
 		{
