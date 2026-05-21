@@ -20,6 +20,9 @@
 		},
 		{
 			"path": "../easy-game-uspirit-hf/ItemFx"
+		},
+		{
+			"path": "../../kx-dev/easy-game-hf"
 		}
 	]
 }

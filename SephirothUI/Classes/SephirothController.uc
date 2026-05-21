@@ -1654,7 +1654,7 @@ auto state Standing
 		}
 
 		// ȣ���� ���� ������, �׳Ѱ� ���;׼� ����.
-		if (IsValidContext(HoverContext) && !HoverContext.Actor.IsA('Monster'))
+		if (IsValidContext(HoverContext))
 			CopyContext(TC, HoverContext);
 		// ������, ���� ����� �׳Ѱ� ���;׼� ����.
 		else 
@@ -1999,7 +1999,7 @@ state Lockup extends LockupBase
 		// ���⼭�� �� � ���ؽ�Ʈ�� ��Ʈ�ѷ����� �ѱ��� �ʰ� �ٸ�
 		// LockupReleasing ���·� �����ϰ� ����.
 
-		if (IsValidContext(HoverContext, CancelDelta) && !HoverContext.Actor.IsA('Monster'))
+		if (IsValidContext(HoverContext, CancelDelta))
 			CopyContext(TC, HoverContext);
 		else 
 		{
