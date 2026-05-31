@@ -37,13 +37,30 @@ function SetData(string sMsg, color color)
     m_fLifeTime = m_fStartTime + m_fLifeSec;
     m_sDesc = sMsg;
     m_color = color;
+
+	ClearWrappedMessage();
+}
+
+function UpdateData(string sMsg, color color)
+{
+	m_fLifeTime = Level.TimeSeconds + m_fLifeSec;
+	m_sDesc = sMsg;
+	m_color = color;
+
+	ClearWrappedMessage();
+}
+
+function ClearWrappedMessage()
+{
+	// 消息内容变更后需要重新分行。
+	m_sMsg.Remove(0, m_sMsg.Length);
+	m_nHeight = 0;
 }
 
 function Layout(Canvas C)
 {
     if(m_sMsg.Length == 0)
     {
-   	    //C.WrapStringToArray(m_sDesc, m_sMsg, Components[0].XL, "|");
 		C.WrapStringToArray(m_sDesc, m_sMsg, Components[0].XL, "|");
    	    m_nHeight = m_sMsg.Length * 16 + 10;
    	}

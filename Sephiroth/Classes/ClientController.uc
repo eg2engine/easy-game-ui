@@ -351,6 +351,155 @@ var vector LastSyncLocation;			// 上次同步的位置（用于检测是否卡�
 var float StuckCheckTime;			// 卡住检测时间
 var float StuckThreshold;			// 卡住阈值（位置变化小于此值认为卡住，默认5单位）
 var float StuckTimeLimit;			// 卡住时间限制（超过此时间强制同步，默认0.5秒）
+var vector LastServerLocation;
+var rotator LastServerRotation;
+var float LastServerMoveTime;
+var bool bRemoteSkillDashLocked;
+var float RemoteSkillDashLockEndTime;
+var vector RemoteSkillDashStartLocation;
+var vector RemoteSkillDashTargetLocation;
+
+function bool IsRemotePlayerPawn()
+{
+	return Pawn != None && Character(Pawn) != None && !Character(Pawn).IsAvatar();
+}
+
+function bool IsRemoteHardControlActive()
+{
+	return PSI != None && PSI.CheckBuffDontAct();
+}
+
+function bool IsRemotePvpStrictSync()
+{
+	local ClientController LocalCC;
+	local bool bUnderSiege;
+
+	if ( PSI == None )
+		return False;
+
+	if ( PSI.PkState || PSI.MatchName != "" || PSI.PVPAttackers.Length > 0 )
+		return True;
+
+	LocalCC = ClientController(Level.GetLocalPlayerController());
+	if ( LocalCC == None || LocalCC.PSI == None )
+		return False;
+
+	if ( LocalCC.ZSI != None )
+		bUnderSiege = LocalCC.ZSI.bUnderSiege;
+
+	if ( class'PlayerServerInfo'.Static.CanAttackPlayer(LocalCC.PSI, PSI, bUnderSiege) )
+		return True;
+
+	return class'PlayerServerInfo'.Static.CanAttackPlayer(PSI, LocalCC.PSI, bUnderSiege);
+}
+
+function bool IsRemoteDashSkillName(string SkillName)
+{
+	return SkillName ~= "Assault";
+}
+
+function bool IsRemoteSkillDashLockActive()
+{
+	if ( !bRemoteSkillDashLocked )
+		return False;
+
+	if ( Level.TimeSeconds >= RemoteSkillDashLockEndTime )
+	{
+		bRemoteSkillDashLocked = False;
+		return False;
+	}
+
+	return IsRemotePlayerPawn();
+}
+
+function BeginRemoteSkillDashLock(string SkillName, vector TargetLoc, float LockTime)
+{
+	if ( !IsRemotePlayerPawn() || !IsRemoteDashSkillName(SkillName) || Pawn == None )
+		return;
+
+	if ( LockTime <= 0.0 )
+		LockTime = 0.55;
+	else if ( LockTime < 0.35 )
+		LockTime = 0.35;
+	else if ( LockTime > 0.80 )
+		LockTime = 0.80;
+
+	bRemoteSkillDashLocked = True;
+	RemoteSkillDashLockEndTime = Level.TimeSeconds + LockTime;
+	RemoteSkillDashStartLocation = Pawn.Location;
+	RemoteSkillDashTargetLocation = TargetLoc;
+	bSyncingPosition = False;
+	StuckCheckTime = 0;
+	RestoreRemoteSyncGroundSpeed();
+}
+
+function bool ShouldHoldRemoteSkillDashMove(vector Loc)
+{
+	local vector vDiff;
+	local float DashDistance;
+	local float DistanceToTarget;
+
+	if ( !IsRemoteSkillDashLockActive() )
+		return False;
+
+	vDiff = RemoteSkillDashTargetLocation - RemoteSkillDashStartLocation;
+	vDiff.Z = 0;
+	DashDistance = VSize(vDiff);
+
+	if ( DashDistance > 100.0 )
+	{
+		vDiff = Loc - RemoteSkillDashTargetLocation;
+		vDiff.Z = 0;
+		DistanceToTarget = VSize(vDiff);
+
+		if ( DistanceToTarget <= 180.0 )
+		{
+			bRemoteSkillDashLocked = False;
+			return False;
+		}
+	}
+
+	bSyncingPosition = False;
+	StuckCheckTime = 0;
+	RestoreRemoteSyncGroundSpeed();
+	return True;
+}
+
+function RestoreRemoteSyncGroundSpeed()
+{
+	if ( OriginalGroundSpeed > 0 && Pawn != None )
+	{
+		Pawn.GroundSpeed = OriginalGroundSpeed;
+		OriginalGroundSpeed = 0;
+	}
+}
+
+function SnapRemoteToServerLocation(vector Loc, bool bStopMove)
+{
+	local vector NewLocation;
+
+	if ( Pawn == None )
+		return;
+
+	NewLocation = Loc;
+	NewLocation.Z = Pawn.Location.Z;
+	Pawn.SetLocation(NewLocation);
+	LastSyncLocation = Pawn.Location;
+	StuckCheckTime = 0;
+	bSyncingPosition = False;
+	RestoreRemoteSyncGroundSpeed();
+
+	if ( bStopMove )
+	{
+		Pawn.Acceleration = vect(0,0,0);
+		Pawn.Velocity = vect(0,0,0);
+		Destination = Pawn.Location;
+	}
+	else
+	{
+		Destination = Loc;
+	}
+}
 
 /**
  * 调试日志输出
@@ -744,11 +893,13 @@ function UpdateActionPool()
 			// 根据技能类型执行不同的动作
 			if ( Skill.IsCombo() ) 
 			{
+				BeginRemoteSkillDashLock(ActionPool[0].SkillName, ActionPool[0].TargetLocation, AttackSpeed);
 				ComboCount = ActionPool[0].ComboCount - 1;
 				NetRecv_StartCombo(Skill,ComboCount,AttackSpeed);
 			}
 			else if (Skill.IsFinish()) 
 			{
+				BeginRemoteSkillDashLock(ActionPool[0].SkillName, ActionPool[0].TargetLocation, AttackSpeed);
 				ComboCount = -1;
 				NetRecv_StartFinish(Skill,AttackSpeed);
 			}
@@ -973,7 +1124,7 @@ state Approaching extends PlayerWalking
 		local name AnimSeq;
 
 		// 如果Buff禁止行动，直接返回
-		if(PSI != None && PSI.CheckBuffDontAct()) 
+		if(PSI != None && PSI.CheckBuffDontAct() && !IsRemotePlayerPawn())
 			return ;
 
 		OldAccel = Pawn.Acceleration;
@@ -1015,7 +1166,7 @@ state Approaching extends PlayerWalking
 		local vector NewLocation;
 	    
 		// 如果Buff禁止行动，直接返回
-		if(PSI != None && PSI.CheckBuffDontAct()) 
+		if(PSI != None && PSI.CheckBuffDontAct() && !IsRemotePlayerPawn())
 			return ;
 
 		Pawn.GetAnimParams(0,AnimSeq, AnimFrame, AnimRate);
@@ -4020,6 +4171,11 @@ event NetRecv_PlayerMove(vector Loc,rotator Rot,vector Acc,bool bJump,float Jump
 	local float SpeedMultiplier;
 	local vector NewLocation;
 
+	LastServerLocation = Loc;
+	LastServerRotation = Rot;
+	LastServerMoveTime = Level.TimeSeconds;
+	SpeedMultiplier = 1.0;
+
 	// 设置期望旋转
 	DesiredRotation = Rot;
 	// 更新Pawn的旋转（只更新偏航角）
@@ -4027,6 +4183,15 @@ event NetRecv_PlayerMove(vector Loc,rotator Rot,vector Acc,bool bJump,float Jump
 	CRot.Yaw = Rot.Yaw;
 	Pawn.SetRotation(CRot);
 	Pawn.bRotateToDesired = False;
+
+	if ( IsRemotePlayerPawn() && IsRemoteHardControlActive() )
+	{
+		SnapRemoteToServerLocation(Loc, True);
+		return;
+	}
+
+	if ( IsRemotePlayerPawn() && ShouldHoldRemoteSkillDashMove(Loc) )
+		return;
 
 	// 如果服务器通知跳跃
 	if ( bJump ) 
@@ -4047,6 +4212,14 @@ event NetRecv_PlayerMove(vector Loc,rotator Rot,vector Acc,bool bJump,float Jump
 		vDiff = Loc - Pawn.Location;
 		vDiff.Z = 0;
 		Distance2D = VSize(vDiff);
+
+		/*
+		if ( IsRemotePvpStrictSync() && Distance2D > 1000.0 )
+		{
+			SnapRemoteToServerLocation(Loc, False);
+			Distance2D = 0.0;
+			SpeedMultiplier = 1.0;
+		} */
 		
 		//("NetRecv_PlayerMove Distance2D: "$Distance2D);
 
@@ -4087,6 +4260,11 @@ event NetRecv_PlayerMove(vector Loc,rotator Rot,vector Acc,bool bJump,float Jump
 			// SpeedMultiplier = 1.0 + (Distance2D / 500.0) * (3.0 - 1.0)
 			SpeedMultiplier = 1.0 + Distance2D / 500.0 * 0.5;
 			bSyncingPosition = True;
+		}
+		else
+		{
+			SpeedMultiplier = 1.0;
+			bSyncingPosition = False;
 		}
 
 
@@ -4224,6 +4402,7 @@ event NetRecv_ActMeleeCombo(string SkillName, character Target, vector TargetLoc
 		ComboCount = CC - 1;
 		// 停止移动
 		Pawn.Acceleration = vect(0,0,0);
+		BeginRemoteSkillDashLock(SkillName, TargetLoc, Speed);
 		// 开始连击
 		NetRecv_StartCombo(Skill,CC - 1,Speed);
 	}
@@ -4254,6 +4433,7 @@ event NetRecv_ActMeleeFinish(string SkillName, character Target, vector TargetLo
 		bRotateToDesired = False;
 		// 重置连击计数
 		ComboCount = -1;
+		BeginRemoteSkillDashLock(SkillName, TargetLoc, Speed);
 		// 开始终结技
 		NetRecv_StartFinish(Skill,Speed);
 	}
@@ -6316,6 +6496,7 @@ event NetRecv_Start2ndSkillAct(Skill Skill, character Target, vector TargetLoc)
 	{
 		Character(Pawn).bJustDamaged = False;
 		Pawn.Acceleration = vect(0,0,0);
+		BeginRemoteSkillDashLock(Skill.SkillName, TargetLoc, 0.55);
 		Start2ndSkillAction(Skill, Target, TargetLoc);
 	}
 }

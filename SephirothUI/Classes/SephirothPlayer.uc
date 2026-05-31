@@ -32,6 +32,7 @@ var struct GaugeStatus
 		var int gauge_effect;
 	} 
 	HPGaugeStatus, MPGaugeStatus;
+var bool bFreezingControlLocked;
 
 function bool CheckChatEraser() 
 { 
@@ -41,6 +42,70 @@ function bool CheckChatEraser()
 function UseChatEraser(bool bSet) 
 { 
 	bNoUseChatEraser = !bSet; 
+}
+
+function bool IsFreezingBuffActive()
+{
+	return PSI != None && PSI.IsEnchantBuff("Freezing");
+}
+
+function StopImmediatelyForFreezing()
+{
+	aForward = 0;
+	aStrafe = 0;
+
+	if ( Pawn != None )
+	{
+		Pawn.Acceleration = vect(0,0,0);
+		Pawn.Velocity = vect(0,0,0);
+		Destination = Pawn.Location;
+
+		if ( Character(Pawn) != None )
+			Character(Pawn).CHAR_PlayWaiting();
+	}
+
+	LockedTarget = None;
+	InteractTo = None;
+	RClickActionEnd();
+	StopAction();
+}
+
+function EnterFreezingState()
+{
+	StopImmediatelyForFreezing();
+	GotoState('Freezing');
+}
+
+function UpdateFreezingControlLock()
+{
+	local bool bActive;
+
+	bActive = IsFreezingBuffActive();
+
+	if ( bActive )
+	{
+		if ( !bFreezingControlLocked )
+		{
+			bFreezingControlLocked = True;
+			if ( !IsInState('Stunning') )
+				EnterFreezingState();
+		}
+		else if ( !IsInState('Freezing') && !IsInState('Stunning') )
+			EnterFreezingState();
+	}
+	else if ( bFreezingControlLocked )
+	{
+		bFreezingControlLocked = False;
+
+		if ( IsInState('Freezing') )
+			GotoState('Navigating');
+	}
+}
+
+function PlayerTick(float DeltaTime)
+{
+	UpdateFreezingControlLock();
+	Super.PlayerTick(DeltaTime);
 }
 
 //@by wj(040113)------
@@ -1274,6 +1339,35 @@ state Stunning extends Navigating
 	{
 		aForward = 0;
 		aStrafe = 0;
+		Super.PlayerMove(DeltaTime);
+	}
+}
+
+state Freezing extends Navigating
+{
+	ignores KeyboardMove,
+	MovePawnToMove,
+	MovePawnToTalk,
+	MovePawnToAttackMelee,
+	MovePawnToPick,
+	MovePawnToTrace,
+	MovePawnToAttackRange,
+	MovePawnToAttackBow,
+	FindNearestItem,
+	Jump;
+
+	function PlayerMove(float DeltaTime)
+	{
+		aForward = 0;
+		aStrafe = 0;
+
+		if ( Pawn != None )
+		{
+			Pawn.Acceleration = vect(0,0,0);
+			Pawn.Velocity = vect(0,0,0);
+			Destination = Pawn.Location;
+		}
+
 		Super.PlayerMove(DeltaTime);
 	}
 }

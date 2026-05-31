@@ -295,6 +295,7 @@ var DissolveDiag	DissolveDlg;		// ����â	Add ssemp
 var SephirothItem	OldDissolveItem;	// ����â Add ssemp
 
 var CCustomBrowser m_CustomBrowser;
+var CEventAlarmDlg EventAlarmDlg;
 
 /*For Test 2009.10.27.Sinhyub*/
 /*
@@ -4774,8 +4775,16 @@ event AddMessage(int MessageType, string Message, color Color)
 		ChannelMgr.OnAddMessage(Message, Color, False, , , , , ,1,"WHISPER");
 	else if (MessageType == 6)	
 		MsgPool.AddMessage(Message, Color, 12, ETextAlign.TA_MiddleCenter, 1, False, , , , , , 1);
-	else if(MessageType == class'GConst'.Default.SM_EventAlarm) //add neive : �̺�Ʈ �˸�
-		class'CEventAlarmDlg'.Static.OnDlg(Self, Message, Color);
+	else if(MessageType == class'GConst'.Default.SM_EventAlarm) // 事件警报提示
+	{
+		if(EventAlarmDlg == None || EventAlarmDlg.bDeleteMe)
+			EventAlarmDlg = class'CEventAlarmDlg'.Static.OnDlg(Self, Message, Color);
+		else
+		{
+			EventAlarmDlg.ShowInterface();
+			EventAlarmDlg.UpdateData(Message, Color);
+		}
+	}
 	else if (MessageType == 254 && ChannelMgr != None)
 		ChannelMgr.OnAddMessage(Message, Color, False, , , , , , 1);
 	else if (MessageType == 255)
