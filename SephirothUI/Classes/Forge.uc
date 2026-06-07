@@ -37,47 +37,56 @@ const BN_Obj16   =28;
 const CMP_Recipe =16;
 
 var string m_sTitle;
-
-//var SepEditBox Edit; // 에디트 컨트롤
-var CImeEdit Edit; // 에디트 컨트롤
-
+var CImeEdit Edit;
 var SephirothInventory SepInventory;
-
-var Recipe Recipe; // 레시피
+var GameCustomCmdManager CustomCmd;
 
 var int nAlpha;
 var bool bAlphaDir;
 
-var bool OnJob;     // 캐릭터를 선택했나?
-var int SelectJob;  // 선택한 캐릭터 직업
-var bool OnPart;    // 제작할 부위를 선택했나?
-var int SelectPart; // 선택한 제작할 부위
+var bool OnJob;
+var int SelectJob;
+var bool OnPart;
+var int SelectPart;
 var bool OnRecipe;
 var int SelectRecipe;
 var bool OnMake;
-var int MakeItemIndex; // 만들려고 클릭한 아이템 인덱스
-var int MakeItemNum;   // 만들 아이템 개수
+var int MakeItemIndex;
+var int MakeItemNum;
 
-var array<int> HavePics; // 가지고 있는 개수
-var array<int> NeedPics; // 필요한 개수
-
-//make frame 디스플레이용
+var array<int> HavePics;
+var array<int> NeedPics;
 var array<string> MakeListName;
 var array<int> MakeListNeedPics;
 var array<int> MakeListHavePics;
-
 var array<Texture> IconList;
-
 var Texture RecipeBtn;
-
 var bool bComplate;
-
 var string teststring;
+
+var int RequestSeq;
+var int LastJobVersion;
+var int LastProductVersion;
+var int LastDetailVersion;
+var int LastPreviewVersion;
+var int LastCraftResultVersion;
+var int LastUIStateVersion;
+var int SelectJobIndex;
+var int SelectProductIndex;
+var int SelectDetailLineIndex;
+var string SelectedProductTitle;
+var string SelectedMakeTarget;
+var int MaxDetailLines;
+var int MaxPreviewLines;
 
 final function Texture LoadDynamicTexture(string TextureName)
 {
 	local Texture T;
 	local int i;
+
+	if (TextureName == "")
+		return None;
+
 	T = Texture(DynamicLoadObject(TextureName,class'Texture'));
 	if (T != None) {
 		for (i=0;i<IconList.Length;i++)
@@ -90,6 +99,7 @@ final function Texture LoadDynamicTexture(string TextureName)
 	}
 	return T;
 }
+
 final function FlushDynamicTextures()
 {
 	local int i,count;
@@ -103,102 +113,92 @@ final function FlushDynamicTextures()
 	IconList.Remove(0,count);
 }
 
-
-
-
-
-
 function OnInit()
 {
 	local int i;
+
 	SepInventory = SephirothPlayer(PlayerOwner).PSI.SepInventory;
 	SepInventory.OnUpdateItem = InternalUpdateItem;
+	CustomCmd = GameManager(Level.Game).GameCustomCmdManager;
 
-	Recipe = spawn(class'Recipe');
-
-	Recipe.LoadRecipe();
-
-	// 닫기 버튼
 	SetComponentNotify(Components[3], BN_Exit ,Self);
 	SetComponentTextureId(Components[3],1,-1,1,2);
-
-	// 만들기 버튼
 	SetComponentNotify(Components[4], BN_Make ,Self);
 	SetComponentTextureId(Components[4],3,-1,5,4);
 
-	// 각 캐릭별 버튼
-	SetComponentNotify(Components[5],BN_OneHand,Self); 
-	SetComponentNotify(Components[6],BN_Bare   ,Self); 
-	SetComponentNotify(Components[7],BN_Red    ,Self); 
-	SetComponentNotify(Components[8],BN_Bow    ,Self); 
-	SetComponentNotify(Components[9],BN_Blue   ,Self); 
+	SetComponentNotify(Components[5],BN_OneHand,Self);
+	SetComponentNotify(Components[6],BN_Bare   ,Self);
+	SetComponentNotify(Components[7],BN_Red    ,Self);
+	SetComponentNotify(Components[8],BN_Bow    ,Self);
+	SetComponentNotify(Components[9],BN_Blue   ,Self);
 
-	// 각 파츠별 버튼
-	SetComponentNotify(Components[10],BN_Weapon  ,Self); 
-	SetComponentNotify(Components[11],BN_Helmet  ,Self); 
-	SetComponentNotify(Components[12],BN_Armor   ,Self); 
-	SetComponentNotify(Components[13],BN_Vambrace,Self); 
-	SetComponentNotify(Components[14],BN_Boots   ,Self); 
-	SetComponentNotify(Components[15],BN_Shield  ,Self); 
+	SetComponentNotify(Components[10],BN_Weapon  ,Self);
+	SetComponentNotify(Components[11],BN_Helmet  ,Self);
+	SetComponentNotify(Components[12],BN_Armor   ,Self);
+	SetComponentNotify(Components[13],BN_Vambrace,Self);
+	SetComponentNotify(Components[14],BN_Boots   ,Self);
+	SetComponentNotify(Components[15],BN_Shield  ,Self);
 
-	for(i=10; i<16; i++) // 모든 파츠 버튼을 감춘다              
+	for(i=10; i<16; i++)
 		Components[i].bVisible = false;
 
-	// 레시피 버튼
 	SetComponentNotify(Components[16],BN_Recipe,Self);
-	SetComponentNotify(Components[17],BN_Obj1  ,Self); 
-	SetComponentNotify(Components[18],BN_Obj2  ,Self); 
-	SetComponentNotify(Components[19],BN_Obj3  ,Self); 
-	SetComponentNotify(Components[20],BN_Obj4  ,Self); 
-	SetComponentNotify(Components[21],BN_Obj5  ,Self); 
-	SetComponentNotify(Components[22],BN_Obj6  ,Self); 
-	SetComponentNotify(Components[23],BN_Obj7  ,Self); 
-	SetComponentNotify(Components[24],BN_Obj8  ,Self); 
-	SetComponentNotify(Components[25],BN_Obj9  ,Self); 
+	SetComponentNotify(Components[17],BN_Obj1  ,Self);
+	SetComponentNotify(Components[18],BN_Obj2  ,Self);
+	SetComponentNotify(Components[19],BN_Obj3  ,Self);
+	SetComponentNotify(Components[20],BN_Obj4  ,Self);
+	SetComponentNotify(Components[21],BN_Obj5  ,Self);
+	SetComponentNotify(Components[22],BN_Obj6  ,Self);
+	SetComponentNotify(Components[23],BN_Obj7  ,Self);
+	SetComponentNotify(Components[24],BN_Obj8  ,Self);
+	SetComponentNotify(Components[25],BN_Obj9  ,Self);
 	SetComponentNotify(Components[26],BN_Obj10 ,Self);
 	SetComponentNotify(Components[27],BN_Obj11 ,Self);
+	SetComponentNotify(Components[28],BN_Obj12 ,Self);
+	SetComponentNotify(Components[29],BN_Obj13 ,Self);
+	SetComponentNotify(Components[30],BN_Obj14 ,Self);
+	SetComponentNotify(Components[31],BN_Obj15 ,Self);
+	SetComponentNotify(Components[32],BN_Obj16 ,Self);
 
 	for(i=16; i<33; i++)
-		Components[i].bVisible = true;
-	//-------------------------------------------------
+		Components[i].bVisible = false;
 
-	Components[16].bDisabled = true; // 최종 제작 버튼 비활성화
-	Components[4].bDisabled = true;  // 만들기 버튼 초기 비활성화
+	Components[16].bDisabled = true;
+	Components[4].bDisabled = true;
 
-	//Edit = SepEditBox(AddInterface("SepInterface.SepEditBox"));
 	Edit = CImeEdit(AddInterface("Interface.CImeEdit"));
 	if (Edit != None)
 	{
 		Edit.bNative = True;
 		Edit.bMaskText = False;
-		//Edit.bTestOutline = True;
-		Edit.SetMaxWidth(2); // 받을 최대 글짜 수
+		Edit.SetMaxWidth(2);
 		Edit.SetSize(153,18);
 		Edit.SetText("");
 		Edit.ShowInterface();
 		Edit.SetFocusEditBox(true);
 	}
 
-
 	nAlpha = 155;
 	bAlphaDir = false;
-
 	OnJob = true;
+	SelectJobIndex = -1;
+	SelectProductIndex = -1;
+	SelectDetailLineIndex = -1;
+	SelectedProductTitle = "";
+	SelectedMakeTarget = "";
+	MaxDetailLines = 17;
+	MaxPreviewLines = 8;
+	HavePics.Length = MaxDetailLines;
+	NeedPics.Length = MaxDetailLines;
 
 	RecipeBtn = Texture(DynamicLoadObject("UI.Compound.Lv12Mix_Button00", class'Texture'));
-	
 	m_sTitle = Localize("Smithy","Smith","Sephiroth");
+	RequestJobList();
 }
 
 function OnFlush()
 {
 	FlushDynamicTextures();
-
-	if (Recipe != None) 
-	{
-		Recipe.Destroy();
-		Recipe = None;
-	}
 
 	if (Edit != None) {
 		Edit.SetFocusEditBox(false);
@@ -215,67 +215,48 @@ function Layout(Canvas C)
 	local int JobButtonX, JobButtonY, SelBtnX, SelBtnY, RecipeBtnX, RecipeBtnY;
 
 	MoveComponentId(0,true,C.ClipX-Components[0].XL,0);
-	for(i=1; i<=2; i++) // 기본 위치 셋팅
+	for(i=1; i<=2; i++)
 		MoveComponentId(i);
 
 	X = Components[0].X;
 	Y = Components[0].Y;
 
-	MoveComponentId(3, false); // 닫기 버튼 위치로!
-	MoveComponentId(4, false); // 만들기 버튼 위치로!
-	
+	MoveComponentId(3, false);
+	MoveComponentId(4, false);
+
 	JobButtonX = X + 315;
-	JobButtonY = Y + 51;
-	for(j=5; j<10; j++) // 캐릭터 선택 버튼들 
+	JobButtonY = Y + 54;
+	for(j=5; j<10; j++)
 		MoveComponentId(j, true, JobButtonX, JobButtonY + ((j-5)*14));
 
 	SelBtnX = X + 315;
-	SelBtnY = Y + 135;
-	for(l=10; l<16; l++) // 만들 부위 선택 버튼들
+	SelBtnY = Y + 138;
+	for(l=10; l<16; l++)
 		MoveComponentId(l, true, SelBtnX, SelBtnY + ((l-10)*14));
 
 	RecipeBtnX = X + 21;
-	RecipeBtnY = Y + 51;
-
-	for(r=16; r<33; r++) // 레시피에서 선택 버튼들
-	{
+	RecipeBtnY = Y + 53;
+	for(r=16; r<33; r++)
 		MoveComponentId(r, true, RecipeBtnX, RecipeBtnY + ((r-16)*14));
-		Components[r].bVisible = false;
-	}
 
-	// 에디트 박스
 	if (Edit != None)
 		Edit.SetPos(Components[0].X + 365, Components[0].Y + 344);
 }
 
 function NotifyComponent(int CmpId,int NotifyId,optional string Command)
 {
-	local int i;
+	local int Index;
 
-	switch (NotifyId) 
+	switch (NotifyId)
 	{
 	case BN_Exit:
 		Parent.NotifyInterface(Self, INT_Close);
 		break;
 
 	case BN_Make:
-		if(MakeItemNum > 0)
-		{
-			//for(i=0; i<Recipe.InableList.Length; i++)
-			//{
-				//if(Recipe.InableList[i] == MakeItemIndex)
-				//{
-					SephirothPlayer(PlayerOwner).Net.NotiMixRaw(MakeItemIndex + 100, MakeItemNum); // 일단 무조건 1개 만들라
-					SepInventory.UpdateItems(); // 아이템 갱신
-					SetRecipeFrame();
-					SetMakeFrame();
-					Edit.SetText("");
-					MakeItemNum = 0;
-					Edit.SetFocusEditBox(true);
-					break;
-				//}
-			//}
-		}
+		MakeItemNum = int(Edit.GetText());
+		if(OnMake && MakeItemNum > 0 && SelectedMakeTarget != "" && CustomCmd != None)
+			CustomCmd.NetNotiCustom(CustomCmd.CMD_C2S_AdvancedSynthesis_Craft, MakeItemNum, 0, SelectedMakeTarget);
 		break;
 
 	case BN_OneHand:
@@ -283,69 +264,86 @@ function NotifyComponent(int CmpId,int NotifyId,optional string Command)
 	case BN_Red:
 	case BN_Bow:
 	case BN_Blue:
+		Index = NotifyId - BN_OneHand;
+		if(CustomCmd == None || Index < 0 || Index >= CustomCmd.AdvancedSynthesisJobs.Length)
+			break;
+
 		OnJob = false;
 		OnPart = true;
-		if(OnRecipe)
-		{
-			OnRecipe = false;
-			OffRecipeFrame();
-		}
-		if(OnMake)
-		{
-			OnMake = false;
-			OffMakeFrame();
-		}
-		SelectJob = NotifyId;   // 선택한 직업 셋팅
-		SetPartFrame(); // 파츠 표시창 셋팅
-		FlushDynamicTextures();	// 목록이 바뀔수도 있으니 일단 아이콘 삭제
+		OnRecipe = false;
+		OnMake = false;
+		SelectJob = NotifyId;
+		SelectJobIndex = Index;
+		SelectProductIndex = -1;
+		SelectDetailLineIndex = -1;
+		SelectedProductTitle = "";
+		SelectedMakeTarget = "";
+		OffRecipeFrame();
+		OffMakeFrame();
+		FlushDynamicTextures();
+		RequestProductList(CustomCmd.AdvancedSynthesisJobs[Index].Id);
 		break;
 
 	case BN_Weapon:
-	case BN_Helmet: 
+	case BN_Helmet:
 	case BN_Armor:
 	case BN_Vambrace:
 	case BN_Boots:
 	case BN_Shield:
+		Index = NotifyId - BN_Weapon;
+		if(CustomCmd == None || Index < 0 || Index >= CustomCmd.AdvancedSynthesisProducts.Length)
+			break;
+
 		OnPart = false;
 		OnRecipe = true;
 		OnMake = false;
 		SelectPart = NotifyId;
-		FlushDynamicTextures();	// 목록이 바뀔수도 있으니 일단 아이콘 삭제
-		SetRecipeFrame(true);
+		SelectProductIndex = Index;
+		SelectDetailLineIndex = -1;
+		SelectedProductTitle = CustomCmd.AdvancedSynthesisProducts[Index].Title;
+		SelectedMakeTarget = "";
+		OffMakeFrame();
+		FlushDynamicTextures();
+		RequestRecipeDetail(SelectedProductTitle);
 		break;
 
 	case BN_Recipe:
-		MakeItemIndex = Recipe.GetRecipeIndex(SelectJob, SelectPart);
-		for(i=0; i<Recipe.InableList.Length; i++)
+	case BN_Obj1:
+	case BN_Obj2:
+	case BN_Obj3:
+	case BN_Obj4:
+	case BN_Obj5:
+	case BN_Obj6:
+	case BN_Obj7:
+	case BN_Obj8:
+	case BN_Obj9:
+	case BN_Obj10:
+	case BN_Obj11:
+	case BN_Obj12:
+	case BN_Obj13:
+	case BN_Obj14:
+	case BN_Obj15:
+	case BN_Obj16:
+		Index = CmpId - CMP_Recipe;
+		if(CustomCmd == None || Index < 0 || Index >= CustomCmd.AdvancedSynthesisDetailLines.Length)
+			break;
+		if(Index == 0)
 		{
-			if(Recipe.InableList[i] == MakeItemIndex) // +100 은 기존 조합 인덱스와 겹쳐서
-			{
-				SephirothPlayer(PlayerOwner).Net.NotiMixRaw(MakeItemIndex + 100, 1); // 일단 무조건 1개 만들라
-				SepInventory.UpdateItems(); // 아이템 갱신
-				SetRecipeFrame();
-				break;
-			}
+			OnMake = true;
+			SelectRecipe = 0;
+			SelectDetailLineIndex = 0;
+			SelectedMakeTarget = CustomCmd.AdvancedSynthesisDetailLines[0].Title;
+			CustomCmd.AdvancedSynthesisPreviewLines.Remove(0, CustomCmd.AdvancedSynthesisPreviewLines.Length);
+			break;
 		}
-		break;
-	case BN_Obj1  :
-	case BN_Obj2  :
-	case BN_Obj3  :
-	case BN_Obj4  :
-	case BN_Obj5  :
-	case BN_Obj6  :
-	case BN_Obj7  :
-	case BN_Obj8  :
-	case BN_Obj9  :
-	case BN_Obj10 :
-	case BN_Obj11 :
-	case BN_Obj12 :
-	case BN_Obj13 :
-	case BN_Obj14 :
-	case BN_Obj15 :
+		if(CustomCmd.AdvancedSynthesisDetailLines[Index].CanCraft != 1)
+			break;
+
 		OnMake = true;
-		SelectRecipe = NotifyId - BN_Recipe;
-		//teststring = "OnMake";
-		SetMakeFrame();
+		SelectRecipe = Index;
+		SelectDetailLineIndex = Index;
+		SelectedMakeTarget = CustomCmd.AdvancedSynthesisDetailLines[Index].Title;
+		RequestMakePreview(SelectedMakeTarget);
 		break;
 	}
 }
@@ -363,12 +361,15 @@ function OnPreRender(Canvas C)
 	X = Components[0].X;
 	Y = Components[0].Y;
 
-	// 알파 깜빡이게 ------------------------------------------------------
+	if(CustomCmd == None)
+		CustomCmd = GameManager(Level.Game).GameCustomCmdManager;
+	SyncAdvancedSynthesisData();
+
 	if(bAlphaDir == true)
 	{
 		if(nAlpha > 155)
 			nAlpha -= 10;
-		else		
+		else
 			bAlphaDir = false;
 	}
 	else
@@ -378,38 +379,26 @@ function OnPreRender(Canvas C)
 		else
 			bAlphaDir = true;
 	}
-	//---------------------------------------------------------------------
 
-	// 아이템, 필요, 보유량 갱신 (아주 자주 불러주므로 렉 생긴다면 여기 좀 줄여주...)
 	SepInventory.UpdateItems();
 
-	if(OnRecipe)
-		SetRecipeFrame();
-
-	Components[4].bDisabled = true;  // 만들기 버튼 비활성화
-
-	if(OnMake)
+	Components[4].bDisabled = true;
+	if(OnMake && Edit != None)
 	{
-		Components[4].bDisabled = false;  // 만들기 버튼 활성화
-		SetMakeFrame();
+		MakeItemNum = int(Edit.GetText());
+		Components[4].bDisabled = !(SelectedMakeTarget != "" && MakeItemNum > 0);
 	}
-	//-------------------------------------------------------------------------
 
-	if(IsCursorInsideAt(Components[0].X + 365, Components[0].Y + 344, 153, 18))
+	if(Edit != None && IsCursorInsideAt(Components[0].X + 365, Components[0].Y + 344, 153, 18))
 		if(!Edit.bHasFocus)
 			Edit.SetFocusEditBox(true);
 
-	if(IsCursorInsideComponent(Components[4])) // 만들기 버튼 위에 있나 체크
-	{
-		teststring = Edit.GetText();
-		MakeItemNum = int(Edit.GetText());
+	if(Edit != None && IsCursorInsideComponent(Components[4]))
 		Edit.SetFocusEditBox(false);
-	}
 
 	DrawBackGround3x3(C, 64, 64, 6, 7, 8, 9, 10, 11, 12, 13, 14);
 	DrawTitle(C, m_sTitle);
 
-//	SelectedBkColor=(A=255,R=188,G=63,B=63)
 	if(OnJob)
 	{
 		C.SetDrawColor(0, nAlpha, 0);
@@ -421,300 +410,320 @@ function OnPreRender(Canvas C)
 		C.SetDrawColor(0, nAlpha, 0);
 		C.SetPos(X + 311, Y + 123);
 		C.DrawRect1Fix(191, 100);
-
-		C.SetDrawColor(nAlpha, 188, 63, 63);
-		C.SetPos(X + 315, Y + 52 + ((SelectJob-1)*14));	// 선택한 직업
-//		C.DrawRect1Fix(181, 16);
-		C.DrawTileStretched(Texture'Engine.WhiteSquareTexture', 181, 14);		
+		if(SelectJobIndex >= 0)
+		{
+			C.SetDrawColor(nAlpha, 188, 63, 63);
+			C.SetPos(X + 315, Y + 52 + (SelectJobIndex*14));
+			C.DrawTileStretched(Texture'Engine.WhiteSquareTexture', 181, 14);
+		}
 	}
 	else if(OnRecipe)
 	{
 		C.SetDrawColor(0, nAlpha, 0);
 		C.SetPos(X + 17, Y + 37);
 		C.DrawRect1Fix(288, 332);
-
-		C.SetDrawColor(nAlpha, 188, 63, 63);
-		C.SetPos(X + 315, Y + 136 + ((SelectPart-6)*14));
-//		C.DrawRect1Fix(181, 16);
-		C.DrawTileStretched(Texture'Engine.WhiteSquareTexture', 181, 14);
-
-		C.SetPos(X + 315, Y + 52 + ((SelectJob-1)*14));	// 선택한 직업
-//		C.DrawRect1Fix(181, 16);
-		C.DrawTileStretched(Texture'Engine.WhiteSquareTexture', 181, 14);
+		if(SelectProductIndex >= 0)
+		{
+			C.SetDrawColor(nAlpha, 188, 63, 63);
+			C.SetPos(X + 315, Y + 136 + (SelectProductIndex*14));
+			C.DrawTileStretched(Texture'Engine.WhiteSquareTexture', 181, 14);
+		}
+		if(SelectJobIndex >= 0)
+		{
+			C.SetPos(X + 315, Y + 52 + (SelectJobIndex*14));
+			C.DrawTileStretched(Texture'Engine.WhiteSquareTexture', 181, 14);
+		}
 	}
 
 	C.SetDrawColor(255,255,255);
 }
 
+function SetDetailLineDrawColor(Canvas C, int Index)
+{
+	local int Have, Need;
+
+	if(CustomCmd == None || Index < 0 || Index >= CustomCmd.AdvancedSynthesisDetailLines.Length)
+	{
+		C.SetDrawColor(255, 255, 255);
+		return;
+	}
+
+	if(Index == 0)
+	{
+		C.SetDrawColor(241, 215, 113);
+		return;
+	}
+
+	Need = CustomCmd.AdvancedSynthesisDetailLines[Index].NeedCount;
+	Have = GetSmithHaveCount(
+		CustomCmd.AdvancedSynthesisDetailLines[Index].ItemClassName,
+		CustomCmd.AdvancedSynthesisDetailLines[Index].NeedSource
+	);
+
+	if(Have >= Need)
+	{
+		C.SetDrawColor(71, 129, 186);
+	}
+	else if(CustomCmd.AdvancedSynthesisDetailLines[Index].CanCraft == 1)
+	{
+		C.SetDrawColor(255, 180, 64);
+	}
+	else
+	{
+		C.SetDrawColor(237, 51, 41);
+	}
+}
+
 function OnPostRender(HUD H, Canvas C)
 {
 	local float X, Y;
-	local int i, cx, index, nStep;
-	local string sIconName;
-	local Texture Icon;
+	local int i, Count, Have, Need, Qty;
+	local string DescText;
+	local array<string> DescLines;
 
 	X = Components[0].X;
 	Y = Components[0].Y;
-	cx = C.ClipX;
 
-	C.SetDrawColor(0, nAlpha, 0);
-	C.KTextFormat = ETextAlign.TA_MiddleLeft;
-/*
-//	SelectedBkColor=(A=255,R=188,G=63,B=63)
-	if(OnJob)
+	if(CustomCmd != None && OnRecipe)
 	{
-		C.SetPos(X + 315, Y + 36);
-		C.DrawRect1Fix(182, 86);
-	}
-	else if(OnPart)
-	{
-		C.SetPos(X + 315, Y + 121);
-		C.DrawRect1Fix(182, 100);
+		Count = Min(CustomCmd.AdvancedSynthesisDetailLines.Length, MaxDetailLines);
+		C.KTextFormat = ETextAlign.TA_MiddleLeft;
+		for(i=0; i<Count; i++)
+		{
+			SetDetailLineDrawColor(C, i);
+			C.DrawKoreanText(
+				PadDetailTitle(CustomCmd.AdvancedSynthesisDetailLines[i].Title, CustomCmd.AdvancedSynthesisDetailLines[i].Indent),
+				Components[i + CMP_Recipe].X,
+				Components[i + CMP_Recipe].Y,
+				Components[i + CMP_Recipe].XL,
+				Components[i + CMP_Recipe].YL
+			);
+		}
 
-		C.SetPos(X + 315, Y + 51 + ((SelectJob-1)*14));	// 선택한 직업
-//		C.DrawRect1Fix(181, 16);
-		C.DrawTileStretched(Texture'Engine.WhiteSquareTexture', 180, 15);		
-	}
-	else if(OnRecipe)
-	{
-		C.SetPos(X + 21, Y + 50);
-		C.DrawRect1Fix(281, 324);
-
-		C.SetPos(X + 315, Y + 135 + ((SelectPart-6)*14));
-		C.DrawRect1Fix(181, 16);
-
-		C.SetPos(X + 315, Y + 51 + ((SelectJob-1)*14));	// 선택한 직업
-		C.DrawRect1Fix(181, 16);
-	}
-*/
-	if(OnRecipe)
-	{
-		C.SetDrawColor(255, 255, 255);
 		C.KTextFormat = ETextAlign.TA_MiddleRight;
-
-		for(i=0; i<NeedPics.Length; i++)
+		for(i=1; i<Count; i++)
 		{
-			if(NeedPics[i] > 0 && NeedPics[i] != 99 && NeedPics[i] != -1)
+			Need = CustomCmd.AdvancedSynthesisDetailLines[i].NeedCount;
+			if(Need > 0)
 			{
-				if(HavePics[i] >= NeedPics[i]) // 충분히 가지고 있다면
-					C.SetDrawColor(71, 129, 186);
-				else                          // 모자르다면
-					C.SetDrawColor(237, 51, 41);
-
-				C.DrawKoreanText("" $ HavePics[i] $ "/" $ NeedPics[i], X + 21, Y + 51 + (i*14), 274, 14);
-			}		
-		}	
-
-		C.SetRenderStyleAlpha();
-		C.SetDrawColor(255, 255, 255);
-
-		for(i=17; i<33; i++)
-		{
-			index = Recipe.GetRecipeDataIndex(SelectJob, SelectPart, i-CMP_Recipe);
-			sIconName = Recipe.IndexToIconName(index);							// 아이템 아이콘 가져오기
-			nStep =	Recipe.IndexToStep(index);
-
-			//Log("iconlist " $ i $ "= " $ index $ ", " $ nStep);
-			if(nStep == 2)
-				C.SetPos(Components[i].X+(15*nStep)-2,Components[i].Y+2);
-			else if(nStep == 3)
-				C.SetPos(Components[i].X+15-2,Components[i].Y+2);
-			else
-				C.SetPos(Components[i].X-2,Components[i].Y+2);
-
-			Icon = LoadDynamicTexture("ItemSprites." $ sIconName);
-			C.DrawTile(Icon,15,15,0,0,32,32);
-		}
-
-		// 버튼 백그라운드 테스트
-		if(bComplate)
-		{
-		//	C.SetDrawColor(255, 255, 255, nAlpha-150);//(228, 200, 128, 120);//nAlpha-50);
-		//	C.DrawTileAlphaArea(RecipeBtn, cx-482, 72, 277, 11, 0, 0, 277, 11);
-			C.SetDrawColor(nAlpha, 200, nAlpha, 255);
-			C.KTextFormat = ETextAlign.TA_MiddleLeft;
-			C.DrawKoreanText("" $ Components[16].Caption, C.ClipX-482, 71, 277, 14);
-		}
-	}
-
-	if(OnMake)
-	{
-		for(i=0; i<4; i++)
-		{
-			if(MakeListName[i] != "")
-			{
-				C.SetDrawColor(255, 255, 255);
-				C.KTextFormat = ETextAlign.TA_MiddleLeft;
-				C.DrawKoreanText(MakeListName[i], X + 315, Y + 234 + (i*14), 65, 15);
-
-				if(MakeListHavePics[i] >= MakeListNeedPics[i]) // 충분히 가지고 있다면
-					C.SetDrawColor(71, 129, 186);
-				else                          // 모자르다면
-					C.SetDrawColor(237, 51, 41);
-
-				C.KTextFormat = ETextAlign.TA_MiddleRight;
-				C.DrawKoreanText(MakeListHavePics[i] $ "/" $ MakeListNeedPics[i], X + 315, Y + 234 + (i*14), 180, 14);
+				Have = GetSmithHaveCount(
+					CustomCmd.AdvancedSynthesisDetailLines[i].ItemClassName,
+					CustomCmd.AdvancedSynthesisDetailLines[i].NeedSource
+				);
+				SetDetailLineDrawColor(C, i);
+				C.DrawKoreanText("" $ Have $ "/" $ Need, X + 21, Y + 53 + (i*14), 274, 14);
 			}
 		}
 
-		// 레시피 안에서 선택한 재료
-		C.SetDrawColor(237, 23, 124);
-		C.SetPos(X + 21, Y + 53 + (SelectRecipe*14));
-		C.DrawRect1Fix(280, 14);
 	}
 
-//	teststring = MakeListName[0];
-
-//	C.DrawKoreanText(teststring, cx-260, 0, 50, 15);
-
-/*
-	for(i=0; i<IconList.Length; i++)
+	if(CustomCmd != None && OnMake)
 	{
-		//sTemp = Recipe.GetRecipeData(SelectJob, SelectPart, i+1);
-		index = Recipe.GetRecipeDataIndex(SelectJob, SelectPart, i+1);
-		nStep =	Recipe.IndexToStep(index);
-
-		//Log("iconlist " $ i $ "= " $ index $ ", " $ nStep);
-		if(nStep == 2)
-			C.SetPos(Components[i+17].X+(15*nStep)-2,Components[i+17].Y+2);
-		else if(nStep == 3)
-			C.SetPos(Components[i+17].X+15-2,Components[i+17].Y+2);
+		Qty = MakeItemNum;
+		if(Qty <= 0)
+			Qty = 1;
+		if(SelectDetailLineIndex == 0 && CustomCmd.AdvancedSynthesisDetailLines.Length > 0)
+		{
+			DescText = CustomCmd.AdvancedSynthesisDetailLines[0].Desc;
+			if(DescText != "")
+			{
+				C.SetDrawColor(255, 255, 255);
+				C.KTextFormat = ETextAlign.TA_MiddleLeft;
+				C.WrapStringToArray(DescText, DescLines, 10000, "|");
+				Count = Min(DescLines.Length, MaxPreviewLines);
+				for(i=0; i<Count; i++)
+					C.DrawKoreanText(DescLines[i], X + 315, Y + 236 + (i*14), 180, 15);
+			}
+		}
 		else
-			C.SetPos(Components[i+17].X-2,Components[i+17].Y+2);
+		{
+			Count = Min(CustomCmd.AdvancedSynthesisPreviewLines.Length, MaxPreviewLines);
+			for(i=0; i<Count; i++)
+			{
+				C.SetDrawColor(255, 255, 255);
+				C.KTextFormat = ETextAlign.TA_MiddleLeft;
+				C.DrawKoreanText(CustomCmd.AdvancedSynthesisPreviewLines[i].Title, X + 315, Y + 236 + (i*14), 90, 15);
 
-		C.DrawTile(IconList[i],15,15,0,0,32,32);
+				Need = CustomCmd.AdvancedSynthesisPreviewLines[i].NeedCount * Qty;
+				Have = GetSmithHaveCount(
+					CustomCmd.AdvancedSynthesisPreviewLines[i].ItemClassName,
+					CustomCmd.AdvancedSynthesisPreviewLines[i].NeedSource
+				);
+				if(Have >= Need)
+					C.SetDrawColor(71, 129, 186);
+				else
+					C.SetDrawColor(237, 51, 41);
+
+				C.KTextFormat = ETextAlign.TA_MiddleRight;
+				C.DrawKoreanText(Have $ "/" $ Need, X + 315, Y + 236 + (i*14), 180, 14);
+			}
+		}
+
+		if(SelectDetailLineIndex >= 0)
+		{
+			C.SetDrawColor(237, 23, 124);
+			C.SetPos(X + 21, Y + 53 + (SelectDetailLineIndex*14));
+			C.DrawRect1Fix(280, 14);
+		}
 	}
-*/
 
 	C.SetDrawColor(231, 202, 174);
 	C.KTextFormat = ETextAlign.TA_MiddleCenter;
-
-	C.DrawKoreanText(Localize("Smithy","Recipe","Sephiroth"), X + 21, Y + 36, 187, 14); // 레시피
-	C.DrawKoreanText(Localize("Smithy","HaveNeed","Sephiroth"), X + 208, Y + 36, 101, 14); // 레시피 보/필
-	C.DrawKoreanText(Localize("Smithy","Job","Sephiroth"), X + 315, Y + 36, 190, 14); // 직업
-	C.DrawKoreanText(Localize("Smithy","Part","Sephiroth"), X + 315, Y + 121, 190, 14); // 부위
-	C.DrawKoreanText(Localize("Smithy","Stuff","Sephiroth"), X + 315, Y + 221, 80, 14); // 제작
-	C.DrawKoreanText(Localize("Smithy","HaveNeed","Sephiroth"), X + 398, Y + 221, 100, 14); // 제작 보/필
-
-	C.DrawKoreanText(Localize("Smithy","Num","Sephiroth"), X + 314, Y + 344, 46, 14); // 조합 개수
-
+	C.DrawKoreanText(Localize("Smithy","Recipe","Sephiroth"), X + 21, Y + 38, 187, 14);
+	C.DrawKoreanText(Localize("Smithy","HaveNeed","Sephiroth"), X + 208, Y + 38, 101, 14);
+	C.DrawKoreanText(Localize("Smithy","Job","Sephiroth"), X + 315, Y + 38, 190, 14);
+	C.DrawKoreanText(Localize("Smithy","Part","Sephiroth"), X + 315, Y + 123, 190, 14);
+	C.DrawKoreanText(Localize("Smithy","Stuff","Sephiroth"), X + 315, Y + 221, 80, 14);
+	C.DrawKoreanText(Localize("Smithy","HaveNeed","Sephiroth"), X + 398, Y + 221, 100, 14);
+	C.DrawKoreanText(Localize("Smithy","Num","Sephiroth"), X + 314, Y + 344, 46, 14);
 	C.KTextFormat = ETextAlign.TA_MiddleLeft;
 }
 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// 응용 함수
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 function InternalUpdateItem(SephirothItem Item)
 {
-	local string Desc;
-	local int Amount;
-
-	Desc = Item.Description;
-	Amount = Item.Amount;
 }
 
+function RequestJobList()
+{
+	if(CustomCmd == None)
+		return;
+	++RequestSeq;
+	CustomCmd.NetNotiCustom(CustomCmd.CMD_C2S_AdvancedSynthesis_RequestJobList, RequestSeq, 0, " ");
+}
+
+function RequestProductList(int JobId)
+{
+	if(CustomCmd == None)
+		return;
+	++RequestSeq;
+	CustomCmd.NetNotiCustom(CustomCmd.CMD_C2S_AdvancedSynthesis_RequestProductList, RequestSeq, JobId, " ");
+}
+
+function RequestRecipeDetail(string ProductTitle)
+{
+	if(CustomCmd == None || ProductTitle == "")
+		return;
+	++RequestSeq;
+	CustomCmd.NetNotiCustom(CustomCmd.CMD_C2S_AdvancedSynthesis_RequestRecipeDetail, RequestSeq, 0, ProductTitle);
+}
+
+function RequestMakePreview(string TargetTitle)
+{
+	if(CustomCmd == None || TargetTitle == "")
+		return;
+	++RequestSeq;
+	CustomCmd.NetNotiCustom(CustomCmd.CMD_C2S_AdvancedSynthesis_RequestMakePreview, RequestSeq, 0, TargetTitle);
+}
+
+function SyncAdvancedSynthesisData()
+{
+	if(CustomCmd == None)
+		return;
+
+	if(LastJobVersion != CustomCmd.AdvancedSynthesisJobVersion)
+	{
+		LastJobVersion = CustomCmd.AdvancedSynthesisJobVersion;
+		SetJobFrame();
+	}
+	if(LastProductVersion != CustomCmd.AdvancedSynthesisProductVersion)
+	{
+		LastProductVersion = CustomCmd.AdvancedSynthesisProductVersion;
+		SetPartFrame();
+	}
+	if(LastDetailVersion != CustomCmd.AdvancedSynthesisDetailVersion)
+	{
+		LastDetailVersion = CustomCmd.AdvancedSynthesisDetailVersion;
+		SetRecipeFrame(true);
+	}
+	if(LastPreviewVersion != CustomCmd.AdvancedSynthesisPreviewVersion)
+	{
+		LastPreviewVersion = CustomCmd.AdvancedSynthesisPreviewVersion;
+		SetMakeFrame();
+	}
+	if(LastCraftResultVersion != CustomCmd.AdvancedSynthesisCraftResultVersion)
+	{
+		LastCraftResultVersion = CustomCmd.AdvancedSynthesisCraftResultVersion;
+		GameManager(Level.Game).PlayerOwner.myHud.AddMessage(3, CustomCmd.AdvancedSynthesisCraftResultMessage, class'Canvas'.Static.MakeColor(255,255,255));
+		SepInventory.UpdateItems();
+		if(SelectedProductTitle != "")
+			RequestRecipeDetail(SelectedProductTitle);
+		if(SelectedMakeTarget != "" && SelectDetailLineIndex > 0)
+			RequestMakePreview(SelectedMakeTarget);
+	}
+	if(LastUIStateVersion != CustomCmd.AdvancedSynthesisUIStateVersion)
+	{
+		LastUIStateVersion = CustomCmd.AdvancedSynthesisUIStateVersion;
+		if(!CustomCmd.AdvancedSynthesisUIVisible)
+			Parent.NotifyInterface(Self, INT_Close);
+	}
+}
+
+function SetJobFrame()
+{
+	local int i;
+
+	for(i=5; i<10; i++)
+	{
+		if(CustomCmd != None && i-5 < CustomCmd.AdvancedSynthesisJobs.Length)
+		{
+			Components[i].bVisible = true;
+			Components[i].Caption = CustomCmd.AdvancedSynthesisJobs[i-5].Title;
+			Components[i].bDisabled = false;
+		}
+		else
+		{
+			Components[i].bVisible = false;
+			Components[i].Caption = "";
+		}
+	}
+}
 
 function SetPartFrame()
 {
-	local int i, n;
-	
-	switch(SelectJob)
-	{
-		case BN_OneHand: n = 0; break;
-		case BN_Bare: n = 6; break;
-		case BN_Red: n = 12; break;
-		case BN_Bow: n = 17; break;
-		case BN_Blue: n = 22; break;
-	}
+	local int i;
 
-	for(i=10; i<15; i++)                    // 무기 ~ 방패 전까지는 일단 모두 보인다
+	for(i=10; i<16; i++)
 	{
-		Components[i].bVisible = true;
-		Components[i].Caption = Recipe.RecipeName[n + (i-10)];
-	}
-
-	if(SelectJob == BN_OneHand || SelectJob == BN_Bare) // 방패 캐릭일 경우만 보이게 한다
-	{
-		Components[15].bVisible = true;
-		if(SelectJob == BN_OneHand)
-			Components[i].Caption = Recipe.RecipeName[5];
+		if(CustomCmd != None && i-10 < CustomCmd.AdvancedSynthesisProducts.Length)
+		{
+			Components[i].bVisible = true;
+			Components[i].Caption = CustomCmd.AdvancedSynthesisProducts[i-10].Title;
+			Components[i].bDisabled = CustomCmd.AdvancedSynthesisProducts[i-10].CanCraft != 1;
+		}
 		else
-			Components[i].Caption = Recipe.RecipeName[11];
+		{
+			Components[i].bVisible = false;
+			Components[i].Caption = "";
+		}
 	}
-	else
-		Components[15].bVisible = false;
 }
 
 function SetRecipeFrame(optional bool bLoad)
 {
-	local int i, index, part, RecipeLine, cnt;
-	local string c, sIconName;
+	local int i, Count;
 
-	bComplate = true;          // 모두 보유 모드로 초기화
-	part = SelectPart;
-
-	for(i=CMP_Recipe; i<33; i++)       // 일단 모든 목록을 다 숨긴다
-		Components[i].bVisible = false;
-
-	SepInventory.UpdateItems();
-
-	for(i=CMP_Recipe; i<33; i++)
+	for(i=16; i<33; i++)
 	{
-		NeedPics[i-16] = -1;
-		HavePics[i-16] = -1;
+		Components[i].bVisible = false;
+		Components[i].Caption = "";
+		Components[i].bDisabled = true;
 	}
 
-	for(i=CMP_Recipe; i<33; i++)
+	if(CustomCmd == None)
+		return;
+
+	Count = Min(CustomCmd.AdvancedSynthesisDetailLines.Length, MaxDetailLines);
+	for(i=0; i<Count; i++)
 	{
-		Components[i].bVisible = true;
-
-		RecipeLine = i - CMP_Recipe;
-		c = Mid( Recipe.DisableList[SelectJob], RecipeLine, 1); // 제작 가능한 것인지 체크
-		if( c == "1" )
-			Components[i].bDisabled = true;
-		else
-			Components[i].bDisabled = false;
-
-		Components[i].Caption = Recipe.GetRecipeData(SelectJob, part, RecipeLine);  // 아이템 이름 가져오기
-		index = Recipe.GetRecipeDataIndex(SelectJob, part, RecipeLine);
-
-		if(bLoad && i != CMP_Recipe)	// 16번은 버려 -_-
-		{
-			sIconName = Recipe.IndexToIconName(index);							// 아이템 아이콘 가져오기
-			//Log("Load Texture " $ "ItemSprites." $ sIconName);
-			LoadDynamicTexture("ItemSprites." $ sIconName);
-		}
-
-		if(Components[i].Caption != "")
-		{
-			NeedPics[RecipeLine] = Recipe.GetRecipeDataNeedPics(SelectJob, part, RecipeLine); // 아이템 필요량 가져오기
-			HavePics[RecipeLine] = SepInventory.GetSmithItemSum(Recipe.ItemSDNameList[index]); // 아이템 보유량 가져오기
-		}
-		else
-		{
-			NeedPics[RecipeLine] = -1;
-			HavePics[RecipeLine] = -1;
-		}
-
-		// 완성품을 제작할 조건이 되는지 체크 ---------------------------------
-		if(index >= 300 && i != 16) // 0(16번)은 레시피 타이틀이므로 체크에서 제외
-		{	
-			++cnt;
-			if(HavePics[i-16] < NeedPics[i-16])
-				bComplate = false; // 하나라도 부족한게 나타나면 모두 보유 모드 false
-		}
-
-//		teststring = "" $ cnt ;
-
-		if(index == 301) // 엘라임이면 루프 중지
-			break;
-		//---------------------------------------------------------------------
-	}	
-
-	
-	if(bComplate)
-		Components[16].bDisabled = false; 
+		Components[i + CMP_Recipe].bVisible = true;
+		Components[i + CMP_Recipe].Caption = "";
+		Components[i + CMP_Recipe].bDisabled = CustomCmd.AdvancedSynthesisDetailLines[i].CanCraft != 1;
+		NeedPics[i] = CustomCmd.AdvancedSynthesisDetailLines[i].NeedCount;
+		HavePics[i] = GetSmithHaveCount(
+			CustomCmd.AdvancedSynthesisDetailLines[i].ItemClassName,
+			CustomCmd.AdvancedSynthesisDetailLines[i].NeedSource
+		);
+	}
 }
 
 function OffRecipeFrame()
@@ -722,41 +731,73 @@ function OffRecipeFrame()
 	local int i;
 
 	for(i=16; i<33; i++)
-		Components[i].bVisible = false;		
+		Components[i].bVisible = false;
 }
 
 function SetMakeFrame()
 {
-	local int i, index, line;
-
-	line = SelectRecipe;
-
-	MakeItemIndex = Recipe.GetRecipeDataIndex(SelectJob, SelectPart, line);
-
-	for(i=0; i<4; i++)
-	{
-		MakeListName[i] = Recipe.GetNeedName(SelectJob, SelectPart, line, i);
-		index = Recipe.GetNeedIndex(SelectJob, SelectPart, line, i);
-		MakeListHavePics[i] = SepInventory.GetSmithItemSum(Recipe.ItemSDNameList[index]);
-		MakeListNeedPics[i] = Recipe.GetNeedPics(SelectJob, SelectPart, line, i);
-	}
-
-	Components[4].bDisabled = false; // 만들기 버튼 활성화
+	Components[4].bDisabled = false;
 }
-
 
 function OffMakeFrame()
 {
-	local int i;
-
-	for(i=0; i<4; i++)
-	{
-		MakeListName[i] = "";
-		MakeListHavePics[i] = 0;
-		MakeListNeedPics[i] = 0;
-	}
+	SelectedMakeTarget = "";
+	SelectDetailLineIndex = -1;
+	if(CustomCmd != None)
+		CustomCmd.AdvancedSynthesisPreviewLines.Remove(0, CustomCmd.AdvancedSynthesisPreviewLines.Length);
+	Components[4].bDisabled = true;
 }
 
+function int GetSmithHaveCount(string ItemClassName, optional string NeedSource)
+{
+	if(NeedSource ~= "wear")
+		return GetWearHaveCount(ItemClassName);
+
+	if(ItemClassName == "" || SepInventory == None)
+		return 0;
+	return SepInventory.GetSmithItemSum(ItemClassName);
+}
+
+function int GetWearHaveCount(string ItemClassName)
+{
+	local int i;
+	local WornItems WI;
+
+	if(ItemClassName == "" || SephirothPlayer(PlayerOwner) == None || SephirothPlayer(PlayerOwner).PSI == None)
+		return 0;
+
+	WI = SephirothPlayer(PlayerOwner).PSI.WornItems;
+	if(WI == None)
+		return 0;
+
+	for(i=0; i<WI.Items.Length; i++)
+	{
+		if(WI.Items[i] != None && WI.Items[i].TypeName == ItemClassName)
+			return 1;
+	}
+
+	return 0;
+}
+
+function string GetIconTextureName(string IconName)
+{
+	if(IconName == "")
+		return "";
+	if(InStr(IconName, ".") != -1)
+		return IconName;
+	return "ItemSprites." $ IconName;
+}
+
+function string PadDetailTitle(string Title, int Indent)
+{
+	if(Indent <= 0)
+		return "   " $ Title;
+	if(Indent == 1)
+		return "      " $ Title;
+	if(Indent == 2)
+		return "         " $ Title;
+	return "            " $ Title;
+}
 defaultproperties
 {
      Components(0)=(XL=518.000000,YL=387.000000)

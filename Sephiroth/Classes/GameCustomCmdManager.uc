@@ -1,6 +1,39 @@
 
 class GameCustomCmdManager extends Object;
 
+struct AdvSynthesisMenuItem
+{
+	var int Id;
+	var string Title;
+	var int ClassType;
+	var string Desc;
+	var int CanCraft;
+	var string ItemClassName;
+	var string ItemIcon;
+};
+
+struct AdvSynthesisDetailLine
+{
+	var string Title;
+	var int NeedCount;
+	var int Indent;
+	var string Desc;
+	var int CanCraft;
+	var string ItemClassName;
+	var string ItemIcon;
+	var string NeedSource;
+};
+
+struct AdvSynthesisPreviewLine
+{
+	var string Title;
+	var int NeedCount;
+	var string Desc;
+	var string ItemClassName;
+	var string ItemIcon;
+	var string NeedSource;
+};
+
 
 //自定义消息协议
 var const int CMD_S2C_GameShop_Open;
@@ -21,6 +54,57 @@ var const int CMD_S2C_CustomBrowser_Content;
 
 //物品
 var const int CMD_S2C_Item_UpdateNumber;
+
+//高级合成
+var const int CMD_C2S_AdvancedSynthesis_RequestJobList;
+var const int CMD_C2S_AdvancedSynthesis_RequestProductList;
+var const int CMD_C2S_AdvancedSynthesis_RequestRecipeDetail;
+var const int CMD_C2S_AdvancedSynthesis_RequestMakePreview;
+var const int CMD_C2S_AdvancedSynthesis_Craft;
+var const int CMD_S2C_AdvancedSynthesis_JobListBegin;
+var const int CMD_S2C_AdvancedSynthesis_JobListItem;
+var const int CMD_S2C_AdvancedSynthesis_JobListEnd;
+var const int CMD_S2C_AdvancedSynthesis_ProductListBegin;
+var const int CMD_S2C_AdvancedSynthesis_ProductListItem;
+var const int CMD_S2C_AdvancedSynthesis_ProductListEnd;
+var const int CMD_S2C_AdvancedSynthesis_DetailBegin;
+var const int CMD_S2C_AdvancedSynthesis_DetailLine;
+var const int CMD_S2C_AdvancedSynthesis_DetailEnd;
+var const int CMD_S2C_AdvancedSynthesis_MakePreviewBegin;
+var const int CMD_S2C_AdvancedSynthesis_MakePreviewLine;
+var const int CMD_S2C_AdvancedSynthesis_MakePreviewEnd;
+var const int CMD_S2C_AdvancedSynthesis_CraftResult;
+var const int CMD_S2C_AdvancedSynthesis_UIState;
+var const int CMD_S2C_AdvancedSynthesis_Open;
+
+var array<AdvSynthesisMenuItem> AdvancedSynthesisJobs;
+var array<AdvSynthesisMenuItem> AdvancedSynthesisProducts;
+var array<AdvSynthesisDetailLine> AdvancedSynthesisDetailLines;
+var array<AdvSynthesisPreviewLine> AdvancedSynthesisPreviewLines;
+var int AdvancedSynthesisJobVersion;
+var int AdvancedSynthesisProductVersion;
+var int AdvancedSynthesisDetailVersion;
+var int AdvancedSynthesisPreviewVersion;
+var int AdvancedSynthesisCraftResultVersion;
+var int AdvancedSynthesisUIStateVersion;
+var string AdvancedSynthesisJobTitle;
+var string AdvancedSynthesisProductTitle;
+var string AdvancedSynthesisDetailHeaderTitle;
+var string AdvancedSynthesisDetailProductTitle;
+var string AdvancedSynthesisDetailDesc;
+var string AdvancedSynthesisPreviewHeaderTitle;
+var string AdvancedSynthesisPreviewTargetTitle;
+var string AdvancedSynthesisPreviewDesc;
+var string AdvancedSynthesisPreviewItemClassName;
+var string AdvancedSynthesisPreviewItemIcon;
+var int AdvancedSynthesisCraftResultCode;
+var int AdvancedSynthesisCraftResultCount;
+var string AdvancedSynthesisCraftResultTarget;
+var string AdvancedSynthesisCraftResultMessage;
+var bool AdvancedSynthesisUIVisible;
+var int AdvancedSynthesisUIReasonCode;
+var string AdvancedSynthesisUIMessageTitle;
+var string AdvancedSynthesisUIMessage;
 
 
 function DebugLog(string message)
@@ -93,6 +177,191 @@ function CustomMessage_CMD_S2C_Item_UpdateNumber(int parm1, int parm2, string bo
 	GameManager(Outer).PlayerOwner.PSI.UpdateItemAmountByPos(int(ItemDatas[0]), int(ItemDatas[1]), int(ItemDatas[2]), int(ItemDatas[3]));
 }
 
+function CustomMessage_CMD_S2C_AdvancedSynthesis_JobListBegin(int parm1, int parm2, string body)
+{
+	AdvancedSynthesisJobs.Remove(0, AdvancedSynthesisJobs.Length);
+	AdvancedSynthesisJobTitle = body;
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_JobListItem(int parm1, int parm2, string body)
+{
+	local array<string> ItemDatas;
+	local int Index;
+
+	Split(body, "$", ItemDatas);
+	if (ItemDatas.Length < 4)
+		return;
+
+	Index = AdvancedSynthesisJobs.Length;
+	AdvancedSynthesisJobs.Length = Index + 1;
+	AdvancedSynthesisJobs[Index].Id = int(ItemDatas[0]);
+	AdvancedSynthesisJobs[Index].Title = ItemDatas[1];
+	AdvancedSynthesisJobs[Index].ClassType = int(ItemDatas[2]);
+	AdvancedSynthesisJobs[Index].Desc = ItemDatas[3];
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_JobListEnd(int parm1, int parm2, string body)
+{
+	++AdvancedSynthesisJobVersion;
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_ProductListBegin(int parm1, int parm2, string body)
+{
+	AdvancedSynthesisProducts.Remove(0, AdvancedSynthesisProducts.Length);
+	AdvancedSynthesisProductTitle = body;
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_ProductListItem(int parm1, int parm2, string body)
+{
+	local array<string> ItemDatas;
+	local int Index;
+
+	Split(body, "$", ItemDatas);
+	if (ItemDatas.Length < 6)
+		return;
+
+	Index = AdvancedSynthesisProducts.Length;
+	AdvancedSynthesisProducts.Length = Index + 1;
+	AdvancedSynthesisProducts[Index].Id = int(ItemDatas[0]);
+	AdvancedSynthesisProducts[Index].Title = ItemDatas[1];
+	AdvancedSynthesisProducts[Index].Desc = ItemDatas[2];
+	AdvancedSynthesisProducts[Index].CanCraft = int(ItemDatas[3]);
+	AdvancedSynthesisProducts[Index].ItemClassName = ItemDatas[4];
+	AdvancedSynthesisProducts[Index].ItemIcon = ItemDatas[5];
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_ProductListEnd(int parm1, int parm2, string body)
+{
+	++AdvancedSynthesisProductVersion;
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_DetailBegin(int parm1, int parm2, string body)
+{
+	local array<string> ItemDatas;
+
+	AdvancedSynthesisDetailLines.Remove(0, AdvancedSynthesisDetailLines.Length);
+	Split(body, "$", ItemDatas);
+	if (ItemDatas.Length >= 3)
+	{
+		AdvancedSynthesisDetailHeaderTitle = ItemDatas[0];
+		AdvancedSynthesisDetailProductTitle = ItemDatas[1];
+		AdvancedSynthesisDetailDesc = ItemDatas[2];
+	}
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_DetailLine(int parm1, int parm2, string body)
+{
+	local array<string> ItemDatas;
+	local int Index;
+
+	Split(body, "$", ItemDatas);
+	if (ItemDatas.Length < 7)
+		return;
+
+	Index = AdvancedSynthesisDetailLines.Length;
+	AdvancedSynthesisDetailLines.Length = Index + 1;
+	AdvancedSynthesisDetailLines[Index].Title = ItemDatas[0];
+	AdvancedSynthesisDetailLines[Index].NeedCount = int(ItemDatas[1]);
+	AdvancedSynthesisDetailLines[Index].Indent = int(ItemDatas[2]);
+	AdvancedSynthesisDetailLines[Index].Desc = ItemDatas[3];
+	AdvancedSynthesisDetailLines[Index].CanCraft = int(ItemDatas[4]);
+	AdvancedSynthesisDetailLines[Index].ItemClassName = ItemDatas[5];
+	AdvancedSynthesisDetailLines[Index].ItemIcon = ItemDatas[6];
+	if (ItemDatas.Length >= 8)
+		AdvancedSynthesisDetailLines[Index].NeedSource = ItemDatas[7];
+	else
+		AdvancedSynthesisDetailLines[Index].NeedSource = "bag";
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_DetailEnd(int parm1, int parm2, string body)
+{
+	++AdvancedSynthesisDetailVersion;
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_MakePreviewBegin(int parm1, int parm2, string body)
+{
+	local array<string> ItemDatas;
+
+	AdvancedSynthesisPreviewLines.Remove(0, AdvancedSynthesisPreviewLines.Length);
+	Split(body, "$", ItemDatas);
+	if (ItemDatas.Length >= 6)
+	{
+		AdvancedSynthesisPreviewHeaderTitle = ItemDatas[0];
+		AdvancedSynthesisPreviewTargetTitle = ItemDatas[1];
+		AdvancedSynthesisPreviewDesc = ItemDatas[2];
+		AdvancedSynthesisPreviewItemClassName = ItemDatas[4];
+		AdvancedSynthesisPreviewItemIcon = ItemDatas[5];
+	}
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_MakePreviewLine(int parm1, int parm2, string body)
+{
+	local array<string> ItemDatas;
+	local int Index;
+
+	Split(body, "$", ItemDatas);
+	if (ItemDatas.Length < 5)
+		return;
+
+	Index = AdvancedSynthesisPreviewLines.Length;
+	AdvancedSynthesisPreviewLines.Length = Index + 1;
+	AdvancedSynthesisPreviewLines[Index].Title = ItemDatas[0];
+	AdvancedSynthesisPreviewLines[Index].NeedCount = int(ItemDatas[1]);
+	AdvancedSynthesisPreviewLines[Index].Desc = ItemDatas[2];
+	AdvancedSynthesisPreviewLines[Index].ItemClassName = ItemDatas[3];
+	AdvancedSynthesisPreviewLines[Index].ItemIcon = ItemDatas[4];
+	if (ItemDatas.Length >= 6)
+		AdvancedSynthesisPreviewLines[Index].NeedSource = ItemDatas[5];
+	else
+		AdvancedSynthesisPreviewLines[Index].NeedSource = "bag";
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_MakePreviewEnd(int parm1, int parm2, string body)
+{
+	++AdvancedSynthesisPreviewVersion;
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_CraftResult(int parm1, int parm2, string body)
+{
+	local array<string> ItemDatas;
+
+	Split(body, "$", ItemDatas);
+	AdvancedSynthesisCraftResultCode = parm1;
+	AdvancedSynthesisCraftResultCount = parm2;
+	if (ItemDatas.Length >= 2)
+	{
+		AdvancedSynthesisCraftResultTarget = ItemDatas[0];
+		AdvancedSynthesisCraftResultMessage = ItemDatas[1];
+	}
+	++AdvancedSynthesisCraftResultVersion;
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_UIState(int parm1, int parm2, string body)
+{
+	local array<string> ItemDatas;
+
+	Split(body, "$", ItemDatas);
+	if (parm1 == 1)
+		AdvancedSynthesisUIVisible = True;
+	else
+		AdvancedSynthesisUIVisible = False;
+	AdvancedSynthesisUIReasonCode = parm2;
+	if (ItemDatas.Length >= 2)
+	{
+		AdvancedSynthesisUIMessageTitle = ItemDatas[0];
+		AdvancedSynthesisUIMessage = ItemDatas[1];
+	}
+	++AdvancedSynthesisUIStateVersion;
+}
+
+function CustomMessage_CMD_S2C_AdvancedSynthesis_Open(int parm1, int parm2, string body)
+{
+	CustomMessage_CMD_S2C_AdvancedSynthesis_UIState(1, parm2, body);
+
+	if (GameManager(Outer) != None && GameManager(Outer).PlayerOwner != None)
+		GameManager(Outer).PlayerOwner.OnSmithDlg();
+}
+
 function bool HandleReceivedCustomMessage(int puslCmd, int cmd, int parm1, int parm2, string body)
 {
 
@@ -123,6 +392,51 @@ function bool HandleReceivedCustomMessage(int puslCmd, int cmd, int parm1, int p
 			return True;
 		case CMD_S2C_Item_UpdateNumber:
 			CustomMessage_CMD_S2C_Item_UpdateNumber(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_JobListBegin:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_JobListBegin(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_JobListItem:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_JobListItem(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_JobListEnd:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_JobListEnd(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_ProductListBegin:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_ProductListBegin(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_ProductListItem:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_ProductListItem(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_ProductListEnd:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_ProductListEnd(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_DetailBegin:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_DetailBegin(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_DetailLine:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_DetailLine(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_DetailEnd:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_DetailEnd(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_MakePreviewBegin:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_MakePreviewBegin(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_MakePreviewLine:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_MakePreviewLine(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_MakePreviewEnd:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_MakePreviewEnd(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_CraftResult:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_CraftResult(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_UIState:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_UIState(parm1, parm2, body);
+			return True;
+		case CMD_S2C_AdvancedSynthesis_Open:
+			CustomMessage_CMD_S2C_AdvancedSynthesis_Open(parm1, parm2, body);
 			return True;
 		default:
 			break;
@@ -177,4 +491,25 @@ defaultproperties
 
 
 	CMD_S2C_Item_UpdateNumber=100080
+
+	CMD_C2S_AdvancedSynthesis_RequestJobList=200120
+	CMD_C2S_AdvancedSynthesis_RequestProductList=200121
+	CMD_C2S_AdvancedSynthesis_RequestRecipeDetail=200122
+	CMD_C2S_AdvancedSynthesis_RequestMakePreview=200123
+	CMD_C2S_AdvancedSynthesis_Craft=200124
+	CMD_S2C_AdvancedSynthesis_JobListBegin=100120
+	CMD_S2C_AdvancedSynthesis_JobListItem=100121
+	CMD_S2C_AdvancedSynthesis_JobListEnd=100122
+	CMD_S2C_AdvancedSynthesis_ProductListBegin=100123
+	CMD_S2C_AdvancedSynthesis_ProductListItem=100124
+	CMD_S2C_AdvancedSynthesis_ProductListEnd=100125
+	CMD_S2C_AdvancedSynthesis_DetailBegin=100126
+	CMD_S2C_AdvancedSynthesis_DetailLine=100127
+	CMD_S2C_AdvancedSynthesis_DetailEnd=100128
+	CMD_S2C_AdvancedSynthesis_MakePreviewBegin=100129
+	CMD_S2C_AdvancedSynthesis_MakePreviewLine=100130
+	CMD_S2C_AdvancedSynthesis_MakePreviewEnd=100131
+	CMD_S2C_AdvancedSynthesis_CraftResult=100132
+	CMD_S2C_AdvancedSynthesis_UIState=100133
+	CMD_S2C_AdvancedSynthesis_Open=100134
 }

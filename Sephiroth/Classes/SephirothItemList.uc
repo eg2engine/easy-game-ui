@@ -138,7 +138,7 @@ function int GetItemAmountSum(string Name)
 }
 //-------------------
 
-//add neive : 12´Ü ¾ÆÀÌÅÛ -----------------------------------------------------
+//add neive : 12ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ -----------------------------------------------------
 function int GetSmithItemSum(string Name)
 {
 	local int i;
@@ -148,8 +148,7 @@ function int GetSmithItemSum(string Name)
 
 	for(i =0 ; i < Items.Length ; i++)
 	{
-		if(Items[i].Level == 1 || Items[i].Level == 2 || Items[i].Level == 31) // 12´Ü Á¦Á¶¿¡´Â 1, 2, 31·¾ ¾ÆÀÌÅÛ¸¸ ¾²ÀÎ´Ù
-		{
+
 			if(Items[i].TypeName == Name)
 			{
 				if(Items[i].Amount == -1)
@@ -157,7 +156,7 @@ function int GetSmithItemSum(string Name)
 				else
 					Amount += Items[i].Amount;
 			}
-		}
+		
 	}
 
 	return Amount;
