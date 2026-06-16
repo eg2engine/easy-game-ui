@@ -33,8 +33,16 @@ const BN_Obj13   =25;
 const BN_Obj14   =26;
 const BN_Obj15   =27;
 const BN_Obj16   =28;
+const BN_Obj17   =29;
+const BN_Obj18   =30;
+const BN_Obj19   =31;
+const BN_Obj20   =32;
+const BN_Obj21   =33;
+const BN_Obj22   =34;
+const BN_Obj23   =35;
 
 const CMP_Recipe =16;
+const DetailLineHeight =13;
 
 var string m_sTitle;
 var CImeEdit Edit;
@@ -159,8 +167,15 @@ function OnInit()
 	SetComponentNotify(Components[30],BN_Obj14 ,Self);
 	SetComponentNotify(Components[31],BN_Obj15 ,Self);
 	SetComponentNotify(Components[32],BN_Obj16 ,Self);
+	SetComponentNotify(Components[33],BN_Obj17 ,Self);
+	SetComponentNotify(Components[34],BN_Obj18 ,Self);
+	SetComponentNotify(Components[35],BN_Obj19 ,Self);
+	SetComponentNotify(Components[36],BN_Obj20 ,Self);
+	SetComponentNotify(Components[37],BN_Obj21 ,Self);
+	SetComponentNotify(Components[38],BN_Obj22 ,Self);
+	SetComponentNotify(Components[39],BN_Obj23 ,Self);
 
-	for(i=16; i<33; i++)
+	for(i=16; i<40; i++)
 		Components[i].bVisible = false;
 
 	Components[16].bDisabled = true;
@@ -186,7 +201,7 @@ function OnInit()
 	SelectDetailLineIndex = -1;
 	SelectedProductTitle = "";
 	SelectedMakeTarget = "";
-	MaxDetailLines = 17;
+	MaxDetailLines = 24;
 	MaxPreviewLines = 8;
 	HavePics.Length = MaxDetailLines;
 	NeedPics.Length = MaxDetailLines;
@@ -236,8 +251,8 @@ function Layout(Canvas C)
 
 	RecipeBtnX = X + 21;
 	RecipeBtnY = Y + 53;
-	for(r=16; r<33; r++)
-		MoveComponentId(r, true, RecipeBtnX, RecipeBtnY + ((r-16)*14));
+	for(r=16; r<40; r++)
+		MoveComponentId(r, true, RecipeBtnX, RecipeBtnY + ((r-16)*DetailLineHeight));
 
 	if (Edit != None)
 		Edit.SetPos(Components[0].X + 365, Components[0].Y + 344);
@@ -324,6 +339,13 @@ function NotifyComponent(int CmpId,int NotifyId,optional string Command)
 	case BN_Obj14:
 	case BN_Obj15:
 	case BN_Obj16:
+	case BN_Obj17:
+	case BN_Obj18:
+	case BN_Obj19:
+	case BN_Obj20:
+	case BN_Obj21:
+	case BN_Obj22:
+	case BN_Obj23:
 		Index = CmpId - CMP_Recipe;
 		if(CustomCmd == None || Index < 0 || Index >= CustomCmd.AdvancedSynthesisDetailLines.Length)
 			break;
@@ -492,7 +514,7 @@ function OnPostRender(HUD H, Canvas C)
 		{
 			SetDetailLineDrawColor(C, i);
 			C.DrawKoreanText(
-				PadDetailTitle(CustomCmd.AdvancedSynthesisDetailLines[i].Title, CustomCmd.AdvancedSynthesisDetailLines[i].Indent),
+				GetDetailTreeTitle(i),
 				Components[i + CMP_Recipe].X,
 				Components[i + CMP_Recipe].Y,
 				Components[i + CMP_Recipe].XL,
@@ -511,7 +533,7 @@ function OnPostRender(HUD H, Canvas C)
 					CustomCmd.AdvancedSynthesisDetailLines[i].NeedSource
 				);
 				SetDetailLineDrawColor(C, i);
-				C.DrawKoreanText("" $ Have $ "/" $ Need, X + 21, Y + 53 + (i*14), 274, 14);
+				C.DrawKoreanText("" $ Have $ "/" $ Need, X + 21, Y + 53 + (i*DetailLineHeight), 274, 14);
 			}
 		}
 
@@ -562,8 +584,8 @@ function OnPostRender(HUD H, Canvas C)
 		if(SelectDetailLineIndex >= 0)
 		{
 			C.SetDrawColor(237, 23, 124);
-			C.SetPos(X + 21, Y + 53 + (SelectDetailLineIndex*14));
-			C.DrawRect1Fix(280, 14);
+			C.SetPos(X + 21, Y + 53 + (SelectDetailLineIndex*DetailLineHeight));
+			C.DrawRect1Fix(280, DetailLineHeight);
 		}
 	}
 
@@ -702,7 +724,7 @@ function SetRecipeFrame(optional bool bLoad)
 {
 	local int i, Count;
 
-	for(i=16; i<33; i++)
+	for(i=16; i<40; i++)
 	{
 		Components[i].bVisible = false;
 		Components[i].Caption = "";
@@ -730,7 +752,7 @@ function OffRecipeFrame()
 {
 	local int i;
 
-	for(i=16; i<33; i++)
+	for(i=16; i<40; i++)
 		Components[i].bVisible = false;
 }
 
@@ -788,15 +810,23 @@ function string GetIconTextureName(string IconName)
 	return "ItemSprites." $ IconName;
 }
 
-function string PadDetailTitle(string Title, int Indent)
+function string GetDetailTreeTitle(int Index)
 {
-	if(Indent <= 0)
+	local int i, Indent;
+	local string Prefix, Title;
+
+	if(CustomCmd == None || Index < 0 || Index >= CustomCmd.AdvancedSynthesisDetailLines.Length)
+		return "";
+
+	Title = CustomCmd.AdvancedSynthesisDetailLines[Index].Title;
+	if(Index == 0)
 		return "   " $ Title;
-	if(Indent == 1)
-		return "      " $ Title;
-	if(Indent == 2)
-		return "         " $ Title;
-	return "            " $ Title;
+
+	Indent = CustomCmd.AdvancedSynthesisDetailLines[Index].Indent;
+	for(i=0; i<Indent; i++)
+		Prefix = Prefix $ "   ";
+
+	return Prefix $ "   " $ Title;
 }
 defaultproperties
 {
@@ -816,23 +846,30 @@ defaultproperties
      Components(13)=(Id=13,Caption="Vambrace",Type=RES_TextButton,XL=100.000000,YL=14.000000,TextAlign=TA_MiddleLeft,LocType=LCT_Smithy)
      Components(14)=(Id=14,Caption="Boots",Type=RES_TextButton,XL=100.000000,YL=14.000000,TextAlign=TA_MiddleLeft,LocType=LCT_Smithy)
      Components(15)=(Id=15,Caption="Shield",Type=RES_TextButton,XL=100.000000,YL=14.000000,TextAlign=TA_MiddleLeft,LocType=LCT_Smithy)
-     Components(16)=(Id=16,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(17)=(Id=17,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(18)=(Id=18,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(19)=(Id=19,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(20)=(Id=20,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(21)=(Id=21,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(22)=(Id=22,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(23)=(Id=23,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(24)=(Id=24,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(25)=(Id=25,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(26)=(Id=26,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(27)=(Id=27,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(28)=(Id=28,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(29)=(Id=29,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(30)=(Id=30,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(31)=(Id=31,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
-     Components(32)=(Id=32,Type=RES_TextButton,XL=166.000000,YL=14.000000,TextAlign=TA_MiddleLeft)
+     Components(16)=(Id=16,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(17)=(Id=17,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(18)=(Id=18,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(19)=(Id=19,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(20)=(Id=20,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(21)=(Id=21,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(22)=(Id=22,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(23)=(Id=23,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(24)=(Id=24,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(25)=(Id=25,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(26)=(Id=26,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(27)=(Id=27,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(28)=(Id=28,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(29)=(Id=29,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(30)=(Id=30,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(31)=(Id=31,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(32)=(Id=32,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(33)=(Id=33,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(34)=(Id=34,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(35)=(Id=35,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(36)=(Id=36,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(37)=(Id=37,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(38)=(Id=38,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
+     Components(39)=(Id=39,Type=RES_TextButton,XL=166.000000,YL=13.000000,TextAlign=TA_MiddleLeft)
      TextureResources(0)=(Package="UI_2011",Path="make_info",Style=STY_Alpha)
      TextureResources(1)=(Package="UI_2011_btn",Path="btn_x_n",Style=STY_Alpha)
      TextureResources(2)=(Package="UI_2011_btn",Path="btn_x_o",Style=STY_Alpha)

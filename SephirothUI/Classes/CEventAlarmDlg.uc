@@ -15,6 +15,9 @@ static function CEventAlarmDlg OnDlg(CMultiInterface Parent, string sMsg, color 
 {
 	local CEventAlarmDlg dlg;
 
+	if ( Parent == None || Parent.Controller == None || Parent.Controller.HudInterface == None )
+		return None;
+
 	dlg = CEventAlarmDlg(Parent.Controller.HudInterface.AddInterface("SephirothUI.CEventAlarmDlg", false));
 	if(dlg != None)
 	{
@@ -27,8 +30,16 @@ static function CEventAlarmDlg OnDlg(CMultiInterface Parent, string sMsg, color 
 
 function CloseDlg()
 {
+	local CMultiInterface MultiParent;
+
+	if ( SephirothInterface(Parent) != None && SephirothInterface(Parent).EventAlarmDlg == Self )
+		SephirothInterface(Parent).EventAlarmDlg = None;
+
 	HideInterface();
-	CMultiInterface(Parent).RemoveInterface(Self);
+
+	MultiParent = CMultiInterface(Parent);
+	if ( MultiParent != None )
+		MultiParent.RemoveInterface(Self);
 }
 
 function SetData(string sMsg, color color)

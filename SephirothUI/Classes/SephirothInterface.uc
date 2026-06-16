@@ -4754,6 +4754,8 @@ function OnOpenCompound(array<int> Dealings)
 
 event AddMessage(int MessageType, string Message, color Color)
 {
+	local bool bCanShowEventAlarm;
+
 	if ( MessageType == 1 ) 
 	{
 		if( GameManager(Level.Game).GameCustomCmdManager.Handle(Message) )
@@ -4777,13 +4779,27 @@ event AddMessage(int MessageType, string Message, color Color)
 		MsgPool.AddMessage(Message, Color, 12, ETextAlign.TA_MiddleCenter, 1, False, , , , , , 1);
 	else if(MessageType == class'GConst'.Default.SM_EventAlarm) // 事件警报提示
 	{
-		if(EventAlarmDlg == None || EventAlarmDlg.bDeleteMe)
-			EventAlarmDlg = class'CEventAlarmDlg'.Static.OnDlg(Self, Message, Color);
-		else
+		bCanShowEventAlarm = (Controller != None && Controller.HudInterface != None);
+
+		if ( EventAlarmDlg != None
+			&& (!bCanShowEventAlarm || EventAlarmDlg.bDeleteMe || EventAlarmDlg.Parent == None || EventAlarmDlg.Parent != Self || EventAlarmDlg.Controller == None) )
 		{
-			EventAlarmDlg.ShowInterface();
-			EventAlarmDlg.UpdateData(Message, Color);
+			EventAlarmDlg = None;
 		}
+
+		if ( bCanShowEventAlarm )
+		{
+			if(EventAlarmDlg == None)
+				EventAlarmDlg = class'CEventAlarmDlg'.Static.OnDlg(Self, Message, Color);
+			else
+			{
+				EventAlarmDlg.ShowInterface();
+				EventAlarmDlg.UpdateData(Message, Color);
+			}
+		}
+
+		if ( EventAlarmDlg == None && MsgPool != None )
+			MsgPool.AddMessage(Message, Color, 12, ETextAlign.TA_MiddleCenter, 1, False, , , , , , 1);
 	}
 	else if (MessageType == 254 && ChannelMgr != None)
 		ChannelMgr.OnAddMessage(Message, Color, False, , , , , , 1);

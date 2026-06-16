@@ -879,7 +879,16 @@ function bool OnDropItem(Point Dest)
 					);
 				}
 			}
-			else if ( Item.IsApplicationSelect() && ExistItem != None && ExistItem != Item ) 
+			else if (Item.IsApplicationAddSelect() && ExistItem != None && ExistItem != Item)
+			{
+				GameManager(Level.Game).GameCustomCmdManager.NetNotiCustom(
+					GameManager(Level.Game).GameCustomCmdManager.CMD_C2S_ItemAddAttrSelect_Query,
+					0,
+					0,
+					Item.X $ "$" $ Item.Y $ "$" $ ExistItem.X $ "$" $ ExistItem.Y $ "$" $ "0"
+				);
+			}
+			else if ( Item.IsApplicationSelect() && ExistItem != None && ExistItem != Item )
 			{
 				ExistItem.GetAffixList(AffixList);
 				AffixChoice = class'CTextSelectBox'.static.PopupTextSelectBox(Self,Localize("Information","ChooseUpgradeAffix","Sephiroth"), AffixList,false);

@@ -273,6 +273,7 @@ function bool IsUse() { return KindName == "Use"; }
 function bool IsGem() { return DetailType == IDT_Gem; }
 function bool IsApplication() { return KindName == "Application"; }
 function bool IsApplicationSelect() { return KindName == "ApplicationSelect"; }
+function bool IsApplicationAddSelect() { return KindName == "ApplicationAddSelect"; }
 function bool IsApplicationRemoveSelect() { return KindName == "ApplicationRemoveSelect"; }
 //function bool IsShell() { return DetailType == IDT_Shell; }
 function bool IsShell() { return (DetailType == IDT_Shell || DetailType == IDT_SeaShell ); }

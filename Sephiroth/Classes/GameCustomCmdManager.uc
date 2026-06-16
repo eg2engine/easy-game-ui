@@ -53,6 +53,8 @@ var const int CMD_S2C_CustomBrowser_Content;
 
 
 //物品
+var const int CMD_C2S_ItemAddAttrSelect_Query;
+var const int CMD_S2C_ItemAddAttrSelect_Open;
 var const int CMD_S2C_Item_UpdateNumber;
 
 //高级合成
@@ -162,6 +164,11 @@ function CustomMessage_CMD_S2C_CustomBrowser_Status(int parm1, int parm2, string
 function CustomMessage_CMD_S2C_CustomBrowser_Content(int parm1, int parm2, string body)
 {
 	GameManager(Outer).PlayerOwner.SetCustomBrowserContent(body);
+}
+
+function CustomMessage_CMD_S2C_ItemAddAttrSelect_Open(int parm1, int parm2, string body)
+{
+	GameManager(Outer).PlayerOwner.OnItemAddAttrSelectOpen(body);
 }
 
 function CustomMessage_CMD_S2C_Item_UpdateNumber(int parm1, int parm2, string body)
@@ -390,6 +397,9 @@ function bool HandleReceivedCustomMessage(int puslCmd, int cmd, int parm1, int p
 		case CMD_S2C_CustomBrowser_Content:
 			CustomMessage_CMD_S2C_CustomBrowser_Content(parm1, parm2, body);
 			return True;
+		case CMD_S2C_ItemAddAttrSelect_Open:
+			CustomMessage_CMD_S2C_ItemAddAttrSelect_Open(parm1, parm2, body);
+			return True;
 		case CMD_S2C_Item_UpdateNumber:
 			CustomMessage_CMD_S2C_Item_UpdateNumber(parm1, parm2, body);
 			return True;
@@ -490,6 +500,8 @@ defaultproperties
 	CMD_S2C_CustomBrowser_Content=10061
 
 
+	CMD_C2S_ItemAddAttrSelect_Query=200130
+	CMD_S2C_ItemAddAttrSelect_Open=100135
 	CMD_S2C_Item_UpdateNumber=100080
 
 	CMD_C2S_AdvancedSynthesis_RequestJobList=200120

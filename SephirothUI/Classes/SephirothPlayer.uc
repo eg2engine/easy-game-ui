@@ -1,5 +1,12 @@
 class SephirothPlayer extends ClientController;
 
+var int PendingItemAddAttrGemX;
+var int PendingItemAddAttrGemY;
+var int PendingItemAddAttrItemX;
+var int PendingItemAddAttrItemY;
+var int PendingItemAddAttrInventoryIdx;
+var array<int> PendingItemAddAttrSelectIndexes;
+var CTextSelectBox ItemAddAttrChoice;
 var bool bNoUseChatEraser;
 var color CriticalColor, CriticalFinishColor, MissColor, ImmuneColor, DamageColor, StunColorA, StunColorB;
 var color DamagedColor; //add neive : ���� ���� ������ ����
@@ -477,6 +484,64 @@ event OnSmithDlg() //add neive : 12�� ������ ����
 event OnWorldMap()
 {
 	SephirothInterface(myHud).OnWorldMapStart();
+}
+
+event OnItemAddAttrSelectOpen(string body)
+{
+	local array<string> ItemDatas;
+	local array<string> AttrDatas;
+	local array<string> AttrFields;
+	local array<string> Choices;
+	local int i;
+	local int ChoiceIndex;
+	local SephirothInterface SepInterface;
+	Split(body, "$", ItemDatas);
+	if (ItemDatas.Length < 6)
+		return;
+	PendingItemAddAttrGemX = int(ItemDatas[0]);
+	PendingItemAddAttrGemY = int(ItemDatas[1]);
+	PendingItemAddAttrItemX = int(ItemDatas[2]);
+	PendingItemAddAttrItemY = int(ItemDatas[3]);
+	PendingItemAddAttrInventoryIdx = int(ItemDatas[4]);
+	PendingItemAddAttrSelectIndexes.Remove(0, PendingItemAddAttrSelectIndexes.Length);
+	Split(ItemDatas[5], "~", AttrDatas);
+	for (i = 0; i < AttrDatas.Length; i++)
+	{
+		Split(AttrDatas[i], "|", AttrFields);
+		if (AttrFields.Length >= 4)
+		{
+			PendingItemAddAttrSelectIndexes.Insert(PendingItemAddAttrSelectIndexes.Length, 1);
+			PendingItemAddAttrSelectIndexes[PendingItemAddAttrSelectIndexes.Length - 1] = int(AttrFields[0]);
+			ChoiceIndex = Choices.Length;
+			Choices.Insert(ChoiceIndex, 1);
+			Choices[ChoiceIndex] = AttrFields[2];
+		}
+	}
+	if (Choices.Length == 0)
+		return;
+	SepInterface = SephirothInterface(myHud);
+	if (SepInterface == None)
+		return;
+	if (ItemAddAttrChoice != None)
+		ItemAddAttrChoice.Close();
+	ItemAddAttrChoice = class'CTextSelectBox'.static.PopupTextSelectBox(SepInterface, Localize("Information", "ChooseAddAffix", "Sephiroth"), Choices, false);
+	if (ItemAddAttrChoice != None)
+		ItemAddAttrChoice.OnSelectChoice = InternalSelectItemAddAttrChoice;
+}
+function InternalSelectItemAddAttrChoice(int ChoiceIndex, string Choice)
+{
+	if (ChoiceIndex >= 0 && ChoiceIndex < PendingItemAddAttrSelectIndexes.Length)
+	{
+		Net.NotiApplySelect(
+			PendingItemAddAttrGemX,
+			PendingItemAddAttrGemY,
+			PendingItemAddAttrItemX,
+			PendingItemAddAttrItemY,
+			string(PendingItemAddAttrSelectIndexes[ChoiceIndex]),
+			PendingItemAddAttrInventoryIdx
+		);
+	}
+	ItemAddAttrChoice = None;
 }
 
 event OnNPCSearch(string sName)

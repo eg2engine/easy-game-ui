@@ -1265,6 +1265,15 @@ function bool OnDropItem(Point Dest)
 				else if(Item.TypeName!="ReviveWater")
                     class'CMessageBox'.static.MessageBox( Self, "EnchantItem", Foo.LocalizedDescription$"\\n"$Localize("Modals","TitleItemEnchant","Sephiroth"),MB_YesNo,IDM_EnchantItem);
 			}
+            else if (Item.IsApplicationAddSelect() && Foo != None && Foo != Item)
+            {
+                GameManager(Level.Game).GameCustomCmdManager.NetNotiCustom(
+                    GameManager(Level.Game).GameCustomCmdManager.CMD_C2S_ItemAddAttrSelect_Query,
+                    0,
+                    0,
+                    Item.X $ "$" $ Item.Y $ "$" $ Foo.X $ "$" $ Foo.Y $ "$" $ string(SubInvenIndex + 1)
+                );
+            }
             else if (Item.IsApplicationSelect() && Foo != None && Foo != Item)
             {
 			    Foo.GetAffixList(AffixList);

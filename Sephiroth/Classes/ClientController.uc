@@ -699,6 +699,8 @@ native final function Transformation();
  */
 native final function UnTransformation();
 
+
+event OnItemAddAttrSelectOpen(string body);
 /**
  * 落地处理
  * @param HitNormal 碰撞法线
