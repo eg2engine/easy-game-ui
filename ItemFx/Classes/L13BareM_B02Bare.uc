@@ -1,0 +1,11 @@
+class L13BareM_B02Bare extends WeaponEnchantFx;
+
+#exec OBJ LOAD FILE=../Models/13WeaponEF_ST.usx
+
+defaultproperties
+{
+     DrawType=DT_StaticMesh
+     StaticMesh=StaticMesh'13WeaponEF_ST.13BareM_B02'
+     RelativeRotation=(Roll=-16384)
+     bDivineItem=True
+}

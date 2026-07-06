@@ -1,0 +1,11 @@
+class L13StaffRed_C02Red extends WeaponEnchantFx;
+
+#exec OBJ LOAD FILE=../Models/13WeaponEF_ST.usx
+
+defaultproperties
+{
+     DrawType=DT_StaticMesh
+     StaticMesh=StaticMesh'13WeaponEF_ST.13StaffRed_C02'
+     RelativeRotation=(Roll=-16384)
+     bDivineItem=True
+}
