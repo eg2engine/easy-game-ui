@@ -190,7 +190,7 @@ defaultproperties
      ItemFxes(162)=(ItemName="FabulaStick_GodAttackStaff09",ItemEffectClass=Class'ItemFx.FabulaStick_09_GodAttackStaff')
      ItemFxes(163)=(ItemName="MurcielSword_BasicDamage13",ItemEffectClass=Class'ItemFx.MurcielSword_13_BasicDamage')
      ItemFxes(164)=(ItemName="MurcielSword_BasicDamage14",ItemEffectClass=Class'ItemFx.MurcielSword_14_BasicDamage')
-     ItemFxes(165)=(ItemName="MurcielSword_BasicDamage15",ItemEffectClass=Class'ItemFx.MurcielSword_15_BasicDamage')
+     ItemFxes(165)=(ItemName="MurcielSword_BasicDamage15",ItemEffectClass=Class'Sephiroth.MurcielSword15_KillingEffect',SubIndex=57)
      ItemFxes(166)=(ItemName="MurcielSword_BasicDamage16",ItemEffectClass=Class'ItemFx.MurcielSword_16_BasicDamage')
      ItemFxes(167)=(ItemName="MurcielSword_BasicDamage17",ItemEffectClass=Class'ItemFx.MurcielSword_17_BasicDamage')
      ItemFxes(168)=(ItemName="MurcielSword_BasicDamage18",ItemEffectClass=Class'ItemFx.MurcielSword_18_BasicDamage')
@@ -420,4 +420,5 @@ defaultproperties
      WeaponSubEffect(54)=(AuraFx=Class'ItemFx.L13StickBlue_B02Blue')
      WeaponSubEffect(55)=(AuraFx=Class'ItemFx.L13StickBlue_B03Blue',ForceFx=Class'ItemFx.L13StickBlue_C01Blue')
      WeaponSubEffect(56)=(AuraFx=Class'ItemFx.L13StickBlue_B04Blue',ForceFx=Class'ItemFx.L13StickBlue_C02Blue',SpecialForceFx=Class'ItemFx.L13StickBlue_C03Blue')
+     WeaponSubEffect(57)=(AuraFx=Class'Sephiroth.MurcielSword15_CoreGlow')
 }
