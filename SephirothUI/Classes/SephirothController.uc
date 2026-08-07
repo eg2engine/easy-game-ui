@@ -842,6 +842,15 @@ function OnSecondSkillStart(Skill Skill, Actor Target, vector Loc)
 	if( bLostControl )
 		return;
 
+	if ( Skill != None && Skill.SkillName == "Assault" && Target != None &&
+		(Target.IsA('GuardStone') || Target.IsA('MatchStone')) )
+	{
+		SephirothPlayer(ViewportOwner.Actor).myHud.AddMessage(2,
+			Localize("Warnings", "CannotAssaultStone", "Sephiroth"),
+			class'Canvas'.Static.MakeColor(255,255,0));
+		return;
+	}
+
 	if ( SephirothPlayer(ViewportOwner.Actor).Start2ndSkillAction(Skill, Target, Loc) && IsInState('LockupBase') )
 		bRightClickActing = True;
 }
