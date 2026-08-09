@@ -6521,12 +6521,44 @@ event NetRecv_Start2ndSkillHit(Skill Skill, character Target, vector TargetLoc)
 
 event NetRecv_SetActiveSkillCoolTime(Skill Skill)
 {
-	
-	if( Character(Pawn).IsAvatar() )
-	{
-		SecondSkill(Skill).bCharged = False;
-		SecondSkill(Skill).ChargeStartTime = Level.TimeSeconds;
-	}
+	if( Pawn == None || Level == None )
+		return;
+
+	if( !Pawn.IsA('Character') || !Character(Pawn).IsAvatar() )
+		return;
+
+	if( Skill == None || !Skill.IsA('SecondSkill') )
+		return;
+
+	SecondSkill(Skill).ClearServerRemainingCoolTime();
+	SecondSkill(Skill).bCharged = False;
+	SecondSkill(Skill).ChargeStartTime = Level.TimeSeconds;
+}
+
+function NetCustomRecv_SetActiveSkillRemainingCoolTime(string SkillName, int RemainingMs)
+{
+	local Skill ActiveSkill;
+
+	if( PSI == None )
+		return;
+
+	if( Pawn == None )
+		return;
+
+	if( !Pawn.IsA('Character') || !Character(Pawn).IsAvatar() )
+		return;
+
+	if( Level == None )
+		return;
+
+	ActiveSkill = QuerySkillByName(SkillName);
+	if( ActiveSkill == None || !ActiveSkill.IsA('SecondSkill') )
+		return;
+
+	if( RemainingMs < 0 )
+		RemainingMs = 0;
+
+	SecondSkill(ActiveSkill).SetServerRemainingCoolTime(RemainingMs, Level.TimeSeconds);
 }
 
 

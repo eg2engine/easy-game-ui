@@ -107,6 +107,7 @@ var bool AdvancedSynthesisUIVisible;
 var int AdvancedSynthesisUIReasonCode;
 var string AdvancedSynthesisUIMessageTitle;
 var string AdvancedSynthesisUIMessage;
+var const int CMD_S2C_Skill_UpdateRemainingCoolTime;
 
 
 function DebugLog(string message)
@@ -369,6 +370,14 @@ function CustomMessage_CMD_S2C_AdvancedSynthesis_Open(int parm1, int parm2, stri
 		GameManager(Outer).PlayerOwner.OnSmithDlg();
 }
 
+function CustomMessage_CMD_S2C_Skill_UpdateRemainingCoolTime(int parm1, int parm2, string body)
+{
+	if (GameManager(Outer) == None || GameManager(Outer).PlayerOwner == None)
+		return;
+
+	GameManager(Outer).PlayerOwner.NetCustomRecv_SetActiveSkillRemainingCoolTime(body, parm1);
+}
+
 function bool HandleReceivedCustomMessage(int puslCmd, int cmd, int parm1, int parm2, string body)
 {
 
@@ -448,6 +457,9 @@ function bool HandleReceivedCustomMessage(int puslCmd, int cmd, int parm1, int p
 		case CMD_S2C_AdvancedSynthesis_Open:
 			CustomMessage_CMD_S2C_AdvancedSynthesis_Open(parm1, parm2, body);
 			return True;
+		case CMD_S2C_Skill_UpdateRemainingCoolTime:
+			CustomMessage_CMD_S2C_Skill_UpdateRemainingCoolTime(parm1, parm2, body);
+			return True;
 		default:
 			break;
 	}
@@ -524,4 +536,5 @@ defaultproperties
 	CMD_S2C_AdvancedSynthesis_CraftResult=100132
 	CMD_S2C_AdvancedSynthesis_UIState=100133
 	CMD_S2C_AdvancedSynthesis_Open=100134
+	CMD_S2C_Skill_UpdateRemainingCoolTime=100081
 }
