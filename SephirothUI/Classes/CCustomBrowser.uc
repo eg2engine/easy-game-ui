@@ -3,8 +3,9 @@
 // 1) 使用 '|' 作为分隔符（UE2 默认支持 | 换行），支持连续分隔产生空行
 // 2) 行首样式前缀使用 "[X]" 标记，多个标记可叠加，最后以 ":" 结束
 //    例：[F][Y][1]:折叠标题（黄色一级缩进）
-//    支持：F(折叠标记，全局只有一个) Y(黄) B(蓝) W(白) G(绿) R(红) O(橙) 1/2/3(缩进) >(前缀箭头)
-//    注意：[F] 标记的行会显示为折叠标题（[-] 或 [+]），点击可折叠/展开后续内容
+//    支持：F(分区折叠标题) Y(黄) B(蓝) W(白) G(绿) R(红) O(橙) 1/2/3(缩进) >(前缀箭头)
+//    多列行：[C=0,38,150]:第一列 [C]第二列 [C]第三列，列位置和内容均由后端声明
+//    注意：每个固定分区各有一个 [F] 标题，点击可独立折叠/展开
 // 3) 行内可选色标记：[Y]文字[/]（可叠加，但仅做简单切换）
 class CCustomBrowser extends CInterface;
 
@@ -30,16 +31,23 @@ struct RichLine
 	var bool bTitle;
 	var bool bEmpty;
 	var color LineColor;
+	var bool bColumns;
+	var array<int> ColumnOffsets;
+	var array<string> ColumnTexts;
 };
 
 // 是否显示、折叠状态、原始内容、解析后的行数据
-var bool bVisible;
-var bool bCollapsed;				// 全局折叠状态（默认展开）
-var string RawContent;
-var array<RichLine> ParsedLines;
-// 折叠标题行索引（全局只有一个，-1 表示没有折叠标记）
-var int TitleLineIndex;
-var float TitleLineY;				// 标题行的 Y 坐标（用于点击检测）
+struct BrowserSection
+{
+	var bool bVisible;
+	var bool bCollapsed;
+	var string RawContent;
+	var array<RichLine> ParsedLines;
+	var int TitleLineIndex;
+	var float TitleLineY;
+	var float LastUpdateTime;
+	var int SourceId;
+};
 
 // 颜色表（可按需扩展）
 var color ColorTitle;
@@ -53,57 +61,86 @@ var color ColorOrange;
 // 允许显示的最大行数（0 表示不限制）
 var int MaxShowLines;
 
+// 新增变量统一放在变量块末尾
+var BrowserSection ActivitySection;
+var BrowserSection RankingSection;
+const RANKING_TIMEOUT = 8.0;
+
 function OnInit()
 {
 }
 
 function OnFlush()
 {
-	// 清理缓存内容
-	ParsedLines.Remove(0, ParsedLines.Length);
-	RawContent = "";
-	bVisible = False;
-	TitleLineIndex = -1;
+	ClearSection(ActivitySection, True);
+	ClearSection(RankingSection, True);
 	SaveConfig();
 }
 
 // 外部调用：设置内容并可控制显示/隐藏
 function SetContent(string InContent, optional bool bShow)
 {
-	// 设置原始内容并立即解析
-	RawContent = InContent;
-	if ( bShow )
-		bVisible = True;
-	ParseContent();
+	SetSectionContent(ActivitySection, InContent, bShow);
 }
 
 function ClearContent()
 {
-	// 清空当前解析结果
-	ParsedLines.Remove(0, ParsedLines.Length);
-	RawContent = "";
+	ClearSection(ActivitySection, False);
 }
 
 function SetVisible(bool bInVisible)
 {
 	// 仅控制显示状态，不改动内容
-	bVisible = bInVisible;
+	ActivitySection.bVisible = bInVisible;
 }
 
 function bool IsVisible()
 {
 	// 查询当前显示状态
-	return bVisible;
+	return ActivitySection.bVisible;
 }
 
 function SetCollapsed(bool bInCollapsed)
 {
-	bCollapsed = bInCollapsed;
+	ActivitySection.bCollapsed = bInCollapsed;
 }
 
 function bool IsCollapsed()
 {
-	return bCollapsed;
+	return ActivitySection.bCollapsed;
+}
+
+function SetRankingContent(string InContent, int InSourceId, optional bool bShow)
+{
+	RankingSection.SourceId = InSourceId;
+	SetSectionContent(RankingSection, InContent, bShow);
+	RankingSection.LastUpdateTime = Level.TimeSeconds;
+}
+
+function ClearRankingContent()
+{
+	ClearSection(RankingSection, True);
+}
+
+function SetRankingVisible(bool bInVisible, int InSourceId)
+{
+	if ( bInVisible )
+	{
+		RankingSection.SourceId = InSourceId;
+		RankingSection.bVisible = True;
+		return;
+	}
+
+	// SourceId=0 作为强制隐藏；否则只隐藏当前来源，避免不同业务互相覆盖
+	if ( InSourceId != 0 && RankingSection.SourceId != InSourceId )
+		return;
+
+	ClearSection(RankingSection, True);
+}
+
+function bool IsRankingVisible()
+{
+	return RankingSection.bVisible;
 }
 
 function OnPreRender(Canvas C)
@@ -113,90 +150,29 @@ function OnPreRender(Canvas C)
 
 function OnPostRender(HUD H, Canvas C)
 {
-	local float X, Y, XL, YL;
-	local int i, nShown;
-	local float YLine, UsedY;
-	local string CollapseMark;
-	local string TitleText;
+	local float YLine;
 
-	// 隐藏时不渲染
-	if ( !bVisible )
-		return;
-
-	// 取绘制区域
-	X = Components[0].X;
-	Y = Components[0].Y;
-	XL = Components[0].XL;
-	YL = Components[0].YL;
+	if ( RankingSection.bVisible && Level.TimeSeconds - RankingSection.LastUpdateTime > RANKING_TIMEOUT )
+		ClearSection(RankingSection, True);
 
 	YLine = 0;
-	nShown = 0;
-
-	for ( i = 0; i < ParsedLines.Length; i++ )
-	{
-		// 如果是折叠标题行，显示折叠标记和内容文本
-		if ( i == TitleLineIndex )
-		{
-			TitleLineY = Y + YLine;
-			if ( bCollapsed )
-				CollapseMark = "[+]";
-			else
-				CollapseMark = "[-]";
-
-			// 显示折叠标记和标题内容
-			TitleText = CollapseMark@GetLinePlainText(ParsedLines[i]);
-			C.SetDrawColor(ColorTitle.R, ColorTitle.G, ColorTitle.B, 255);
-			UsedY = DrawKoreanTextMultiLine(C, X, Y + YLine, XL, LINE_HEIGHT, 0, LINE_HEIGHT + LINE_GAP, TitleText);
-			YLine += UsedY;
-			nShown++;
-
-			// 如果折叠，跳过后续所有内容
-			if ( bCollapsed )
-				break;
-			continue;
-		}
-
-		// 折叠状态下，跳过标题行之后的所有内容
-		if ( TitleLineIndex != -1 && i > TitleLineIndex && bCollapsed )
-			continue;
-
-		// 跳过空行
-		if ( ParsedLines[i].bEmpty )
-		{
-			YLine += LINE_HEIGHT + LINE_GAP;
-			continue;
-		}
-
-		// 检查是否有内容可显示
-		if ( ParsedLines[i].Segments.Length == 0 )
-			continue;
-
-		// 达到显示上限则停止
-		if ( MaxShowLines > 0 && nShown >= MaxShowLines )
-			break;
-
-		UsedY = DrawLine(C, ParsedLines[i], X, Y + YLine, XL);
-		YLine += UsedY;
-		++nShown;
-
-		// 超出组件高度则停止
-		if ( YLine > YL )
-			break;
-	}
+	DrawSection(C, ActivitySection, YLine);
+	DrawSection(C, RankingSection, YLine);
 }
 
 function bool PointCheck()
 {
-	// 仅折叠标题行区域可点击（折叠/展开）
-	if ( TitleLineIndex == -1 )
-		return False;
-	return IsCursorInsideAt(Components[0].X, TitleLineY, Components[0].XL, LINE_HEIGHT + LINE_GAP);
+	if ( ActivitySection.bVisible && ActivitySection.TitleLineIndex != -1 && IsCursorInsideAt(Components[0].X, ActivitySection.TitleLineY, Components[0].XL, LINE_HEIGHT + LINE_GAP) )
+		return True;
+	if ( RankingSection.bVisible && RankingSection.TitleLineIndex != -1 && IsCursorInsideAt(Components[0].X, RankingSection.TitleLineY, Components[0].XL, LINE_HEIGHT + LINE_GAP) )
+		return True;
+	return False;
 }
 
 function Layout(Canvas C)
 {
-	// 与任务提示一致的默认位置（固定，不可拖动）
-	MoveComponent(Components[0], True, C.ClipX - Components[0].XL - 45, C.ClipY - Components[0].YL - 100);
+	// 左边界保持不变，仅利用原右侧预留空间增加单行显示宽度
+	MoveComponent(Components[0], True, C.ClipX - Components[0].XL - 5, C.ClipY - Components[0].YL - 100);
 }
 
 function bool IsCursorInsideInterface()
@@ -208,12 +184,13 @@ function bool OnKeyEvent(Interaction.EInputKey Key, Interaction.EInputAction Act
 {
 	if ( Key == IK_LeftMouse && PointCheck() )
 	{
-		if ( Action == IST_Release )
-		{
-			// 切换全局折叠状态
-			bCollapsed = !bCollapsed;
+		if ( Action != IST_Release )
 			return True;
-		}
+		if ( ActivitySection.bVisible && ActivitySection.TitleLineIndex != -1 && IsCursorInsideAt(Components[0].X, ActivitySection.TitleLineY, Components[0].XL, LINE_HEIGHT + LINE_GAP) )
+			ActivitySection.bCollapsed = !ActivitySection.bCollapsed;
+		else if ( RankingSection.bVisible && RankingSection.TitleLineIndex != -1 && IsCursorInsideAt(Components[0].X, RankingSection.TitleLineY, Components[0].XL, LINE_HEIGHT + LINE_GAP) )
+			RankingSection.bCollapsed = !RankingSection.bCollapsed;
+		return True;
 	}
 
 	return False;
@@ -221,7 +198,79 @@ function bool OnKeyEvent(Interaction.EInputKey Key, Interaction.EInputAction Act
 
 // --------------------- 解析与绘制 ---------------------
 
-function ParseContent()
+function SetSectionContent(out BrowserSection Section, string InContent, optional bool bShow)
+{
+	Section.RawContent = InContent;
+	if ( bShow )
+		Section.bVisible = True;
+	ParseSection(Section);
+}
+
+function ClearSection(out BrowserSection Section, bool bHide)
+{
+	Section.ParsedLines.Remove(0, Section.ParsedLines.Length);
+	Section.RawContent = "";
+	Section.TitleLineIndex = -1;
+	Section.LastUpdateTime = 0;
+	Section.SourceId = 0;
+	if ( bHide )
+		Section.bVisible = False;
+}
+
+function DrawSection(Canvas C, out BrowserSection Section, out float YLine)
+{
+	local float X, Y, XL, YL, UsedY;
+	local int i, nShown;
+	local string CollapseMark, TitleText;
+
+	Section.TitleLineY = -1;
+	if ( !Section.bVisible )
+		return;
+
+	X = Components[0].X;
+	Y = Components[0].Y;
+	XL = Components[0].XL;
+	YL = Components[0].YL;
+	nShown = 0;
+	for ( i = 0; i < Section.ParsedLines.Length; i++ )
+	{
+		if ( i == Section.TitleLineIndex )
+		{
+			Section.TitleLineY = Y + YLine;
+			if ( Section.bCollapsed )
+				CollapseMark = "[+]";
+			else
+				CollapseMark = "[-]";
+			TitleText = CollapseMark@GetLinePlainText(Section.ParsedLines[i]);
+			C.SetDrawColor(ColorTitle.R, ColorTitle.G, ColorTitle.B, 255);
+			UsedY = DrawKoreanTextMultiLine(C, X, Y + YLine, XL, LINE_HEIGHT, 0, LINE_HEIGHT + LINE_GAP, TitleText);
+			// DrawKoreanTextMultiLine 返回额外换行高度，单行标题仍需加上基础行高
+			YLine += UsedY + LINE_HEIGHT;
+			nShown++;
+			if ( Section.bCollapsed )
+				break;
+			continue;
+		}
+		if ( Section.TitleLineIndex != -1 && i > Section.TitleLineIndex && Section.bCollapsed )
+			continue;
+		if ( Section.ParsedLines[i].bEmpty )
+		{
+			YLine += LINE_HEIGHT + LINE_GAP;
+			continue;
+		}
+		if ( Section.ParsedLines[i].Segments.Length == 0 )
+			continue;
+		if ( MaxShowLines > 0 && nShown >= MaxShowLines )
+			break;
+		UsedY = DrawLine(C, Section.ParsedLines[i], X, Y + YLine, XL);
+		YLine += UsedY;
+		nShown++;
+		if ( YLine > YL )
+			break;
+	}
+}
+
+function ParseSection(out BrowserSection Section)
 {
 	local array<string> Lines;
 	local int i;
@@ -231,54 +280,53 @@ function ParseContent()
 	local bool bWasCollapsed;	// 保存当前的折叠状态，避免更新内容时自动展开
 
 	// 保存当前的折叠状态，避免更新内容时自动展开
-	bWasCollapsed = bCollapsed;
+	bWasCollapsed = Section.bCollapsed;
 
 	// 先将所有换行符替换为 |，统一处理
-	NormalizedContent = ReplaceNewlinesWithPipe(RawContent);
+	NormalizedContent = ReplaceNewlinesWithPipe(Section.RawContent);
 
 	// 将原始内容拆分为多行并解析
-	ParsedLines.Remove(0, ParsedLines.Length);
+	Section.ParsedLines.Remove(0, Section.ParsedLines.Length);
 	Lines = SplitByPipe(NormalizedContent);
 
 	for ( i = 0; i < Lines.Length; i++ )
 	{
 		RawLine = TrimLine(Lines[i]);
 		Line = BuildLine(RawLine);
-		ParsedLines[ParsedLines.Length] = Line;
+		Section.ParsedLines[Section.ParsedLines.Length] = Line;
 	}
 
 	// 查找 [F] 折叠标记行（全局只有一个）
 	
-	TitleLineIndex = -1;
-	for ( i = 0; i < ParsedLines.Length; i++ )
+	Section.TitleLineIndex = -1;
+	for ( i = 0; i < Section.ParsedLines.Length; i++ )
 	{
-		if ( ParsedLines[i].bTitle )
+		if ( Section.ParsedLines[i].bTitle )
 		{
-			// 找到 [F] 标记行，记录索引（全局只有一个）
-			if ( TitleLineIndex == -1 )
+			if ( Section.TitleLineIndex == -1 )
 			{
-				TitleLineIndex = i;
+				Section.TitleLineIndex = i;
 			}
 			else
 			{
 				// 如果已经有折叠标记，清除多余的 [F] 标记，作为普通内容显示
-				ParsedLines[i].bTitle = False;
+				Section.ParsedLines[i].bTitle = False;
 				// 如果颜色是 ColorTitle（只有[F]标记），则改为默认白色
-				if ( ParsedLines[i].LineColor.R == ColorTitle.R && 
-					ParsedLines[i].LineColor.G == ColorTitle.G && 
-					ParsedLines[i].LineColor.B == ColorTitle.B )
+				if ( Section.ParsedLines[i].LineColor.R == ColorTitle.R &&
+					Section.ParsedLines[i].LineColor.G == ColorTitle.G &&
+					Section.ParsedLines[i].LineColor.B == ColorTitle.B )
 				{
-					ParsedLines[i].LineColor = ColorWhite;
+					Section.ParsedLines[i].LineColor = ColorWhite;
 				}
 			}
 		}
 	}
 	
 	// 如果找到了折叠标记，保持之前的折叠状态；如果没有折叠标记，默认展开
-	if ( TitleLineIndex == -1 )
-		bCollapsed = False;	// 没有折叠标记时，默认展开
+	if ( Section.TitleLineIndex == -1 )
+		Section.bCollapsed = False;	// 没有折叠标记时，默认展开
 	else
-		bCollapsed = bWasCollapsed;	// 有折叠标记时，保持之前的折叠状态
+		Section.bCollapsed = bWasCollapsed;	// 有折叠标记时，保持之前的折叠状态
 }
 
 function string GetLinePlainText(RichLine Line)
@@ -321,6 +369,13 @@ function RichLine BuildLine(string RawLine)
 	}
 
 	Content = TrimLine(Content);
+	if ( Line.bColumns )
+	{
+		ParseColumnTexts(Content, Line.ColumnTexts);
+		if ( Line.ColumnTexts.Length != Line.ColumnOffsets.Length )
+			Line.bColumns = False;
+		Content = JoinColumnTexts(Line.ColumnTexts);
+	}
 	// 解析行内颜色标记并生成分段
 	ParseInlineSegments(Content, Line.LineColor, Line.Segments);
 
@@ -354,6 +409,12 @@ function ApplyToken(string Token, out RichLine Line)
 {
 	local string UpperToken;
 	UpperToken = Caps(Token);
+	if ( Left(UpperToken, 2) == "C=" )
+	{
+		ParseColumnOffsets(Mid(Token, 2), Line.ColumnOffsets);
+		Line.bColumns = Line.ColumnOffsets.Length > 0;
+		return;
+	}
 
 	// 将标记映射为样式
 	switch ( UpperToken )
@@ -364,9 +425,7 @@ function ApplyToken(string Token, out RichLine Line)
 			Line.LineColor = ColorTitle;
 			break;
 		case "T":
-			// [T] 保留作为兼容（向后兼容，但建议使用 [F]）
-			Line.bTitle = True;
-			Line.LineColor = ColorTitle;
+			// [T] 是历史兼容标记，不创建新的折叠标题
 			break;
 		case "Y": Line.LineColor = ColorYellow; break;
 		case "B": Line.LineColor = ColorBlue; break;
@@ -379,6 +438,99 @@ function ApplyToken(string Token, out RichLine Line)
 		case "3": Line.Indent = 3; break;
 		case ">": Line.bBullet = True; break;
 	}
+}
+
+function ParseColumnOffsets(string Spec, out array<int> Offsets)
+{
+	local int CommaPos, Offset, PreviousOffset;
+	local string Part, Rest;
+	local bool bFirst;
+
+	Offsets.Remove(0, Offsets.Length);
+	Rest = Spec;
+	bFirst = True;
+	while ( Rest != "" )
+	{
+		CommaPos = InStr(Rest, ",");
+		if ( CommaPos == -1 )
+		{
+			Part = Rest;
+			Rest = "";
+		}
+		else
+		{
+			Part = Left(Rest, CommaPos);
+			if ( CommaPos == Len(Rest) - 1 )
+			{
+				Offsets.Remove(0, Offsets.Length);
+				return;
+			}
+			Rest = Mid(Rest, CommaPos + 1);
+		}
+
+		Part = TrimLine(Part);
+		if ( !IsNonNegativeInteger(Part) )
+		{
+			Offsets.Remove(0, Offsets.Length);
+			return;
+		}
+		Offset = int(Part);
+		if ( Offset < 0 || (!bFirst && Offset <= PreviousOffset) )
+		{
+			Offsets.Remove(0, Offsets.Length);
+			return;
+		}
+		Offsets[Offsets.Length] = Offset;
+		PreviousOffset = Offset;
+		bFirst = False;
+	}
+}
+
+function bool IsNonNegativeInteger(string Value)
+{
+	local int i;
+
+	if ( Value == "" )
+		return False;
+	for ( i = 0; i < Len(Value); i++ )
+		if ( InStr("0123456789", Mid(Value, i, 1)) == -1 )
+			return False;
+	return True;
+}
+
+function ParseColumnTexts(string Content, out array<string> Texts)
+{
+	local int MarkerPos;
+	local string Part, Rest;
+
+	Texts.Remove(0, Texts.Length);
+	Rest = Content;
+	while ( True )
+	{
+		MarkerPos = InStr(Rest, "[C]");
+		if ( MarkerPos == -1 )
+		{
+			Texts[Texts.Length] = TrimLine(Rest);
+			return;
+		}
+		Part = Left(Rest, MarkerPos);
+		Texts[Texts.Length] = TrimLine(Part);
+		Rest = Mid(Rest, MarkerPos + 3);
+	}
+}
+
+function string JoinColumnTexts(array<string> Texts)
+{
+	local int i;
+	local string Result;
+
+	for ( i = 0; i < Texts.Length; i++ )
+	{
+		if ( i > 0 )
+			Result = Result$" ";
+		Result = Result$Texts[i];
+	}
+	return Result;
 }
 
 function ParseInlineSegments(string Content, color BaseColor, out array<RichSegment> Segs)
@@ -452,7 +604,7 @@ function color ColorFromTag(string Tag, color DefaultColor)
 
 function float DrawLine(Canvas C, RichLine Line, float X, float Y, float XL)
 {
-	local float DrawX, UsedY;
+	local float DrawX, UsedY, AvailableWidth, ColumnX, ColumnWidth;
 	local int i;
 	local float SegW, SegH;
 	local float LineUsedY;
@@ -472,6 +624,22 @@ function float DrawLine(Canvas C, RichLine Line, float X, float Y, float XL)
 		C.TextSize(Bullet, SegW, SegH);
 		C.DrawKoreanText(Bullet, DrawX, Y, XL, LINE_HEIGHT);
 		DrawX += SegW + 4;
+	}
+
+	AvailableWidth = XL - (DrawX - X);
+	if ( Line.bColumns && AreColumnsDrawable(Line, AvailableWidth) )
+	{
+		C.SetDrawColor(Line.LineColor.R, Line.LineColor.G, Line.LineColor.B, 255);
+		for ( i = 0; i < Line.ColumnTexts.Length; i++ )
+		{
+			ColumnX = DrawX + float(Line.ColumnOffsets[i]);
+			if ( i + 1 < Line.ColumnOffsets.Length )
+				ColumnWidth = float(Line.ColumnOffsets[i + 1] - Line.ColumnOffsets[i]);
+			else
+				ColumnWidth = AvailableWidth - float(Line.ColumnOffsets[i]);
+			C.DrawKoreanText(Line.ColumnTexts[i], ColumnX, Y, ColumnWidth, LINE_HEIGHT);
+		}
+		return float(LINE_HEIGHT);
 	}
 
 	if ( Line.Segments.Length == 1 )
@@ -510,6 +678,22 @@ function float DrawLine(Canvas C, RichLine Line, float X, float Y, float XL)
 	}
 
 	return UsedY + LINE_HEIGHT;
+}
+
+function bool AreColumnsDrawable(RichLine Line, float AvailableWidth)
+{
+	local int i;
+
+	if ( Line.ColumnOffsets.Length == 0 || Line.ColumnOffsets.Length != Line.ColumnTexts.Length )
+		return False;
+	for ( i = 0; i < Line.ColumnOffsets.Length; i++ )
+	{
+		if ( Line.ColumnOffsets[i] < 0 || float(Line.ColumnOffsets[i]) >= AvailableWidth )
+			return False;
+		if ( i > 0 && Line.ColumnOffsets[i] <= Line.ColumnOffsets[i - 1] )
+			return False;
+	}
+	return True;
 }
 
 function string ReplaceNewlinesWithPipe(string S)
@@ -616,5 +800,5 @@ defaultproperties
 	ColorGreen=(R=120,G=220,B=140,A=255)
 	ColorRed=(R=255,G=120,B=120,A=255)
 	ColorOrange=(R=255,G=180,B=120,A=255)
-	Components(0)=(XL=175.000000,YL=450.000000)
+	Components(0)=(XL=260.000000,YL=450.000000)
 }

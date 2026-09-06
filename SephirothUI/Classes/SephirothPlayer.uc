@@ -1694,6 +1694,16 @@ simulated function SetCustomBrowserContent(string content)
 	SephirothInterface(myHud).SetCustomBrowserContent(content);
 }
 
+simulated function SetRankingBrowserVisible(bool bVisible, int sourceId)
+{
+	SephirothInterface(myHud).SetRankingBrowserVisible(bVisible, sourceId);
+}
+
+simulated function SetRankingBrowserContent(string content, int sourceId)
+{
+	SephirothInterface(myHud).SetRankingBrowserContent(content, sourceId);
+}
+
 
 event NetRecv_NotiSubInvenInfoUpdate(int Index, string EndTime, int Validity, bool bCommandOpen)	
 {

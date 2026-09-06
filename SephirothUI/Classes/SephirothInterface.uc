@@ -563,6 +563,19 @@ function SetCustomBrowserCollapsed(bool bCollapsed)
 		m_CustomBrowser.SetCollapsed(bCollapsed);
 }
 
+function SetRankingBrowserVisible(bool bVisible, int SourceId)
+{
+	if ( m_CustomBrowser != None )
+		m_CustomBrowser.SetRankingVisible(bVisible, SourceId);
+}
+
+function SetRankingBrowserContent(string Content, int SourceId)
+{
+	if ( m_CustomBrowser != None )
+		// 内容消息只发给需要看到该排行的玩家，收到即显示
+		m_CustomBrowser.SetRankingContent(Content, SourceId, True);
+}
+
 function bool IgnoreHide()
 {
 	if ( Exchange != None )			// ��ȯ

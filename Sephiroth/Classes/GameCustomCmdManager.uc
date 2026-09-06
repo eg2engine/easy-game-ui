@@ -109,6 +109,10 @@ var string AdvancedSynthesisUIMessageTitle;
 var string AdvancedSynthesisUIMessage;
 var const int CMD_S2C_Skill_UpdateRemainingCoolTime;
 
+// 新增变量统一放在变量块末尾
+var const int CMD_S2C_RankingBrowser_Status;
+var const int CMD_S2C_RankingBrowser_Content;
+
 
 function DebugLog(string message)
 {
@@ -165,6 +169,16 @@ function CustomMessage_CMD_S2C_CustomBrowser_Status(int parm1, int parm2, string
 function CustomMessage_CMD_S2C_CustomBrowser_Content(int parm1, int parm2, string body)
 {
 	GameManager(Outer).PlayerOwner.SetCustomBrowserContent(body);
+}
+
+function CustomMessage_CMD_S2C_RankingBrowser_Status(int parm1, int parm2, string body)
+{
+	GameManager(Outer).PlayerOwner.SetRankingBrowserVisible(parm1 == 1, parm2);
+}
+
+function CustomMessage_CMD_S2C_RankingBrowser_Content(int parm1, int parm2, string body)
+{
+	GameManager(Outer).PlayerOwner.SetRankingBrowserContent(body, parm2);
 }
 
 function CustomMessage_CMD_S2C_ItemAddAttrSelect_Open(int parm1, int parm2, string body)
@@ -406,6 +420,12 @@ function bool HandleReceivedCustomMessage(int puslCmd, int cmd, int parm1, int p
 		case CMD_S2C_CustomBrowser_Content:
 			CustomMessage_CMD_S2C_CustomBrowser_Content(parm1, parm2, body);
 			return True;
+		case CMD_S2C_RankingBrowser_Status:
+			CustomMessage_CMD_S2C_RankingBrowser_Status(parm1, parm2, body);
+			return True;
+		case CMD_S2C_RankingBrowser_Content:
+			CustomMessage_CMD_S2C_RankingBrowser_Content(parm1, parm2, body);
+			return True;
 		case CMD_S2C_ItemAddAttrSelect_Open:
 			CustomMessage_CMD_S2C_ItemAddAttrSelect_Open(parm1, parm2, body);
 			return True;
@@ -510,6 +530,8 @@ defaultproperties
 
 	CMD_S2C_CustomBrowser_Status=10060
 	CMD_S2C_CustomBrowser_Content=10061
+	CMD_S2C_RankingBrowser_Status=10062
+	CMD_S2C_RankingBrowser_Content=10063
 
 
 	CMD_C2S_ItemAddAttrSelect_Query=200130

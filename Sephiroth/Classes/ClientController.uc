@@ -7098,6 +7098,12 @@ simulated function SetCustomBrowserVisible(bool bVisible);
  */
 simulated function SetCustomBrowserContent(string content);
 
+/** 设置实时排行榜UI可见状态 */
+simulated function SetRankingBrowserVisible(bool bVisible, int sourceId);
+
+/** 设置实时排行榜UI内容 */
+simulated function SetRankingBrowserContent(string content, int sourceId);
+
 event OnUpdatePkPts(int type, int value)		
 {
 	local string message;
