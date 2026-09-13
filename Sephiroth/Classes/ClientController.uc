@@ -7509,6 +7509,15 @@ function bool CanUse2ndSkill();
  */
 function bool CanUseItemNow();
 
+// Optional file-log diagnostics; never adds chat messages.
+exec function BGFXStatus()
+{
+    local BlackGoldWeaponFxLink Link;
+    foreach AllActors(class'BlackGoldWeaponFxLink', Link)
+        if (Link.Weapon != None && Link.Weapon.Base == Pawn)
+            Link.ReportToLog();
+}
+
 defaultproperties
 {
 	MaxCameraDist=24

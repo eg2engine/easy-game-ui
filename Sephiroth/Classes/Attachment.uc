@@ -80,6 +80,8 @@ function PostBeginPlay()
 		MotionTrace = new(Self) MTClass;
 
 	AppClassTag = 'Attachment';
+	if (Level.NetMode != NM_DedicatedServer)
+		Spawn(class'BlackGoldWeaponFxLink', Self);
 }
  
 function ChangeDrawScale(float NewScale)
