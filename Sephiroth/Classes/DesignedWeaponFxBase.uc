@@ -5,36 +5,108 @@ class DesignedWeaponFxBase extends SepEffect;
 var Emitter DetailFx;
 var class<Emitter> DetailClass;
 var Actor DetailAnchor;
+var bool bDetailStructureInvalid;
 
-// SepEffect native attachment can render at its base while its own Location
-// remains stale. Anchor particle simulation to the actual weapon actor.
+simulated function TraceDetailStage(name Stage, int Value)
+{
+    local BlackGoldWeaponFxLink Link;
+    Link = BlackGoldWeaponFxLink(Owner);
+    if (Link != None && !Link.bDeleteMe)
+        Link.TraceStage(Stage, Value);
+}
+
+// Record the failure immediately, without destroying actors inside the callback.
+simulated function MarkDetailStructureInvalid()
+{
+    local BlackGoldWeaponFxLink Link;
+    bDetailStructureInvalid = True;
+    Link = BlackGoldWeaponFxLink(Owner);
+    if (Link != None && !Link.bDeleteMe)
+        Link.RememberInvalidDetail(DetailClass);
+}
+
+simulated function ClearDetailFx()
+{
+    local Emitter OldDetailFx;
+    OldDetailFx = DetailFx;
+    DetailFx = None;
+    if (OldDetailFx != None && !OldDetailFx.bDeleteMe)
+        OldDetailFx.Destroy();
+}
+
+simulated function bool CheckDetailFx()
+{
+    local Designed_GlaciesStickB_Particles BlueDetail;
+    if (DetailFx == None)
+        return False;
+    if (DetailFx.bDeleteMe)
+    {
+        DetailFx = None;
+        return False;
+    }
+    BlueDetail = Designed_GlaciesStickB_Particles(DetailFx);
+    if (BlueDetail != None && !BlueDetail.ValidateStructure())
+        MarkDetailStructureInvalid();
+    if (bDetailStructureInvalid)
+    {
+        ClearDetailFx();
+        return False;
+    }
+    return True;
+}
+
+// The attachment's displayed transform can differ from this actor's Location.
+// Anchor particle simulation to the actual weapon actor.
 simulated function SyncDetailTransform()
 {
     local Actor Anchor;
+    if (bDeleteMe || !CheckDetailFx())
+        return;
     Anchor = DetailAnchor;
     if (Anchor == None)
         Anchor = Base;
-    if (Anchor == None || Anchor.bDeleteMe || DetailFx == None)
+    if (Anchor == None || Anchor.bDeleteMe)
+    {
+        DetailFx.bHidden = True;
         return;
+    }
     DetailFx.SetLocation(Anchor.Location);
     // In-game markers confirmed +Z runs from the grip toward the blade tip.
     DetailFx.SetRotation(Anchor.Rotation);
     DetailFx.bHidden = bHidden || Anchor.bHidden;
 }
 
+// A caller controls retry frequency; Tick never creates replacement particles.
+simulated function bool EnsureDetailFx()
+{
+    if (bDeleteMe || bDetailStructureInvalid || Level.NetMode == NM_DedicatedServer
+        || DetailClass == None)
+        return False;
+    if (CheckDetailFx())
+        return True;
+    if (bDetailStructureInvalid)
+        return False;
+    TraceDetailStage('DetailSpawnBefore', 0);
+    DetailFx = Spawn(DetailClass, Self,, Location, Rotation);
+    if (DetailFx == None || DetailFx.bDeleteMe)
+    {
+        DetailFx = None;
+        TraceDetailStage('DetailSpawnAfter', 0);
+        return False;
+    }
+    TraceDetailStage('DetailSpawnAfter', 1);
+    if (!CheckDetailFx())
+        return False;
+    // The weapon anchor supplies the explicit world transform.
+    DetailFx.SetBase(None);
+    SyncDetailTransform();
+    return True;
+}
+
 simulated event PostBeginPlay()
 {
     Super.PostBeginPlay();
-    if (Level.NetMode != NM_DedicatedServer && DetailClass != None)
-    {
-        DetailFx = Spawn(DetailClass, Self,, Location, Rotation);
-        if (DetailFx != None)
-        {
-            // Explicit world transform avoids the stale SepEffect transform.
-            DetailFx.SetBase(None);
-            SyncDetailTransform();
-        }
-    }
+    EnsureDetailFx();
 }
 
 simulated event Tick(float DeltaTime)
@@ -45,11 +117,7 @@ simulated event Tick(float DeltaTime)
 
 simulated event Destroyed()
 {
-    if (DetailFx != None)
-    {
-        DetailFx.Destroy();
-        DetailFx = None;
-    }
+    ClearDetailFx();
     Super.Destroyed();
 }
 

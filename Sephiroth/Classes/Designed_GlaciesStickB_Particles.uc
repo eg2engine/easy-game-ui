@@ -8,6 +8,35 @@ var vector LastTail;
 var bool bTailReady;
 var float TailMotion;
 var float TailTime;
+var bool bStructureInvalid;
+var bool bFirstTickTraced;
+
+simulated function bool ValidateStructure()
+{
+    local DesignedWeaponFxBase FxBase;
+    if (bDeleteMe || bStructureInvalid)
+        return False;
+    if (Emitters.Length < 25)
+        bStructureInvalid = True;
+    else if (Emitters[2] == None || Emitters[3] == None || Emitters[5] == None
+        || Emitters[10] == None || Emitters[11] == None
+        || Emitters[15] == None || Emitters[16] == None
+        || Emitters[17] == None || Emitters[18] == None
+        || Emitters[23] == None || Emitters[24] == None)
+        bStructureInvalid = True;
+    else if (Emitters[23].ColorScale.Length < 1)
+        bStructureInvalid = True;
+    if (bStructureInvalid)
+    {
+        FxBase = DesignedWeaponFxBase(Owner);
+        if (FxBase != None && !FxBase.bDeleteMe)
+            FxBase.MarkDetailStructureInvalid();
+        bHidden = True;
+        Disable('Tick');
+        return False;
+    }
+    return True;
+}
 
 simulated event Tick(float DeltaTime)
 {
@@ -16,6 +45,18 @@ simulated event Tick(float DeltaTime)
     local int I;
     local float Angle, Breath, Surge;
     local vector P;
+    local DesignedWeaponFxBase FxBase;
+    if (bDeleteMe)
+        return;
+    if (!bFirstTickTraced)
+    {
+        bFirstTickTraced = True;
+        FxBase = DesignedWeaponFxBase(Owner);
+        if (FxBase != None && !FxBase.bDeleteMe)
+            FxBase.TraceDetailStage('ParticleFirstTick', 0);
+    }
+    if (!ValidateStructure())
+        return;
     FrostPhase += DeltaTime * 0.8;
     // V38: one connected energy crown instead of orbiting head points.
     Surge = FMax(Sin(FrostPhase * 0.7), 0.0);
