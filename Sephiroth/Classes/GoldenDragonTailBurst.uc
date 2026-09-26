@@ -1,0 +1,103 @@
+class GoldenDragonTailBurst extends Emitter;
+defaultproperties
+{
+    Begin Object Class=SpriteEmitter Name=TailBurstHalo
+        CoordinateSystem=PTCS_Relative
+        UseRotationFrom=PTRS_Actor
+        UseColorScale=True
+        ColorScale(0)=(Color=(R=170,G=40,B=8,A=255))
+        ColorScale(1)=(RelativeTime=0.5,Color=(R=220,G=120,B=25,A=255))
+        ColorScale(2)=(RelativeTime=1,Color=(R=0,G=0,B=0,A=0))
+        FadeIn=True
+        FadeOut=True
+        FadeInEndTime=0.06
+        FadeOutStartTime=0.20
+        UniformSize=True
+        MaxParticles=4
+        AutomaticInitialSpawning=False
+        InitialParticlesPerSecond=10
+        StartLocationRange=(X=(Min=-4,Max=4),Y=(Min=-4,Max=4),Z=(Min=-1,Max=3))
+        StartSizeRange=(X=(Min=12,Max=18))
+        Texture=Texture'EffectTextureA.Common.particle05'
+        DrawStyle=PTDS_Additive
+        AlphaTest=False
+        ZTest=True
+        ZWrite=False
+        LifetimeRange=(Min=0.3,Max=0.35)
+        SecondsBeforeInactive=0
+    End Object
+    Emitters(0)=SpriteEmitter'TailBurstHalo'
+    Begin Object Class=SpriteEmitter Name=TailBurstCore
+        CoordinateSystem=PTCS_Relative
+        UseRotationFrom=PTRS_Actor
+        UseColorScale=True
+        ColorScale(0)=(Color=(R=255,G=235,B=170,A=255))
+        ColorScale(1)=(RelativeTime=0.5,Color=(R=255,G=235,B=170,A=255))
+        ColorScale(2)=(RelativeTime=1,Color=(R=255,G=90,B=25,A=0))
+        ColorMultiplierRange=(X=(Min=2,Max=2),Y=(Min=2,Max=2),Z=(Min=2,Max=2))
+        FadeIn=True
+        FadeOut=True
+        FadeInEndTime=0.06
+        FadeOutStartTime=0.358
+        UniformSize=True
+        UseDirectionAs=PTDU_Up
+        SpinParticles=False
+        MaxParticles=12
+        AutomaticInitialSpawning=False
+        InitialParticlesPerSecond=22
+        StartLocationRange=(X=(Min=0,Max=8),Y=(Min=-4,Max=4),Z=(Min=-4,Max=4))
+        StartSizeRange=(X=(Min=18,Max=28))
+        Texture=Texture'EffectEnvTextureD.A.fire_sq001_k'
+        TextureUSubdivisions=4
+        TextureVSubdivisions=4
+        BlendBetweenSubdivisions=True
+        AlphaTest=False
+        ZTest=True
+        ZWrite=False
+        DrawStyle=PTDS_Additive
+        SecondsBeforeInactive=0
+        LifetimeRange=(Min=0.65,Max=0.65)
+        StartVelocityRange=(X=(Min=12,Max=20),Y=(Min=-2,Max=2),Z=(Min=-2,Max=2))
+    End Object
+    Emitters(1)=SpriteEmitter'TailBurstCore'
+
+    Begin Object Class=SpriteEmitter Name=TailBurstOuter
+        CoordinateSystem=PTCS_Relative
+        UseRotationFrom=PTRS_Actor
+        UseColorScale=True
+        ColorScale(0)=(Color=(R=255,G=150,B=55,A=255))
+        ColorScale(1)=(RelativeTime=0.5,Color=(R=255,G=150,B=55,A=255))
+        ColorScale(2)=(RelativeTime=1,Color=(R=255,G=90,B=25,A=0))
+        ColorMultiplierRange=(X=(Min=2,Max=2),Y=(Min=2,Max=2),Z=(Min=2,Max=2))
+        FadeIn=True
+        FadeOut=True
+        FadeInEndTime=0.06
+        FadeOutStartTime=0.440
+        UniformSize=True
+        UseDirectionAs=PTDU_Up
+        SpinParticles=False
+        MaxParticles=10
+        AutomaticInitialSpawning=False
+        InitialParticlesPerSecond=15
+        StartLocationRange=(X=(Min=0,Max=8),Y=(Min=-4,Max=4),Z=(Min=-4,Max=4))
+        StartSizeRange=(X=(Min=26,Max=40))
+        Texture=Texture'EffectEnvTextureD.A.fire_long'
+        TextureUSubdivisions=5
+        TextureVSubdivisions=5
+        BlendBetweenSubdivisions=True
+        AlphaTest=False
+        ZTest=True
+        ZWrite=False
+        DrawStyle=PTDS_Additive
+        SecondsBeforeInactive=0
+        LifetimeRange=(Min=0.8,Max=0.8)
+        StartVelocityRange=(X=(Min=24,Max=38),Y=(Min=-5,Max=5),Z=(Min=-5,Max=5))
+    End Object
+    Emitters(2)=SpriteEmitter'TailBurstOuter'
+    RemoteRole=ROLE_None
+    bHidden=False
+    bUnlit=True
+    bNoDelete=False
+    bCollideActors=False
+    AutoDestroy=False
+}

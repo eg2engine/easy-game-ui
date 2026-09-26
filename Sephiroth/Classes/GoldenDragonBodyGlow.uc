@@ -1,0 +1,61 @@
+class GoldenDragonBodyGlow extends Emitter;
+defaultproperties
+{
+    Begin Object Class=SpriteEmitter Name=RedGoldSkinLight
+        CoordinateSystem=PTCS_Relative
+        UseColorScale=True
+        ColorScale(0)=(Color=(R=160,G=140,B=10,A=255))
+        ColorScale(1)=(RelativeTime=0.5,Color=(R=220,G=195,B=30,A=255))
+        ColorScale(2)=(RelativeTime=1,Color=(R=0,G=0,B=0,A=0))
+        FadeIn=True
+        FadeOut=True
+        FadeInEndTime=0.06
+        FadeOutStartTime=0.20
+        UniformSize=True
+        MaxParticles=4
+        AutomaticInitialSpawning=False
+        InitialParticlesPerSecond=10
+        StartLocationRange=(X=(Min=-4,Max=4),Y=(Min=-4,Max=4),Z=(Min=-1,Max=3))
+        StartSizeRange=(X=(Min=12,Max=18))
+        Texture=Texture'EffectTextureA.Common.particle05'
+        DrawStyle=PTDS_Additive
+        AlphaTest=False
+        ZTest=True
+        ZWrite=False
+        LifetimeRange=(Min=0.3,Max=0.35)
+        SecondsBeforeInactive=0
+    End Object
+    Emitters(0)=SpriteEmitter'RedGoldSkinLight'
+    Begin Object Class=SpriteEmitter Name=BodyElectricSkin
+        CoordinateSystem=PTCS_Relative
+        UseColorScale=True
+        ColorScale(0)=(Color=(R=255,G=245,B=85,A=255))
+        ColorScale(1)=(RelativeTime=0.4,Color=(R=255,G=210,B=15,A=255))
+        ColorScale(2)=(RelativeTime=1,Color=(R=0,G=0,B=0,A=0))
+        UniformSize=True
+        SpinParticles=True
+        StartSpinRange=(X=(Min=0,Max=1))
+        MaxParticles=4
+        AutomaticInitialSpawning=False
+        InitialParticlesPerSecond=22
+        StartLocationRange=(X=(Min=-8,Max=8),Y=(Min=-8,Max=8),Z=(Min=-5,Max=7))
+        StartSizeRange=(X=(Min=10,Max=16))
+        Texture=Texture'EffectTexture.effect001.elect02'
+        TextureUSubdivisions=4
+        TextureVSubdivisions=4
+        BlendBetweenSubdivisions=True
+        DrawStyle=PTDS_Additive
+        AlphaTest=False
+        ZTest=True
+        ZWrite=False
+        LifetimeRange=(Min=0.12,Max=0.18)
+        SecondsBeforeInactive=0
+    End Object
+    Emitters(1)=SpriteEmitter'BodyElectricSkin'
+    RemoteRole=ROLE_None
+    bHidden=False
+    bUnlit=True
+    bNoDelete=False
+    bCollideActors=False
+    AutoDestroy=False
+}

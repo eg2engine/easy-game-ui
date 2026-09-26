@@ -1,0 +1,42 @@
+class GoldenDragonMouthFlame extends Emitter;
+defaultproperties
+{
+    Begin Object Class=SpriteEmitter Name=PearlSideFireFlow
+        CoordinateSystem=PTCS_Relative
+        UseRotationFrom=PTRS_Actor
+        UseDirectionAs=PTDU_Up
+        SpinParticles=False
+        UseColorScale=True
+        ColorScale(0)=(Color=(R=255,G=220,B=80,A=255))
+        ColorScale(1)=(RelativeTime=0.5,Color=(R=255,G=150,B=25,A=255))
+        ColorScale(2)=(RelativeTime=1,Color=(R=0,G=0,B=0,A=0))
+        FadeIn=True
+        FadeInEndTime=0.04
+        FadeOut=True
+        FadeOutStartTime=0.25
+        UniformSize=True
+        MaxParticles=10
+        AutomaticInitialSpawning=False
+        InitialParticlesPerSecond=24
+        StartLocationRange=(X=(Min=0,Max=2),Y=(Min=-1,Max=1),Z=(Min=-1,Max=1))
+        StartSizeRange=(X=(Min=8,Max=13))
+        StartVelocityRange=(X=(Min=45,Max=65),Y=(Min=-1,Max=1),Z=(Min=-1,Max=1))
+        Texture=Texture'EffectEnvTextureD.A.fire_long'
+        TextureUSubdivisions=5
+        TextureVSubdivisions=5
+        BlendBetweenSubdivisions=True
+        DrawStyle=PTDS_Additive
+        AlphaTest=False
+        ZTest=True
+        ZWrite=False
+        LifetimeRange=(Min=0.35,Max=0.45)
+        SecondsBeforeInactive=0
+    End Object
+    Emitters(0)=SpriteEmitter'PearlSideFireFlow'
+    RemoteRole=ROLE_None
+    bHidden=False
+    bUnlit=True
+    bNoDelete=False
+    bCollideActors=False
+    AutoDestroy=False
+}

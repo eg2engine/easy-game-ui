@@ -9,6 +9,24 @@ function bool CanStop(float Distance);
 
 event Tick(float DeltaTime)
 {
+    local GoldenDragonGuardianLink L;
+    if (class'GoldenDragonGuardianLink'.Static.IsDragon(Guardian(Pawn)))
+    {
+        if (!IsInState('GoldenDragonControlled')) GotoState('GoldenDragonControlled');
+        foreach Pawn.ChildActors(class'GoldenDragonGuardianLink', L)
+            if (!L.bDeleteMe) { L.UpdateDragon(DeltaTime); return; }
+        L = Spawn(class'GoldenDragonGuardianLink', Pawn);
+        if (L != None) L.UpdateDragon(DeltaTime);
+        return;
+    }
+    if (IsInState('GoldenDragonControlled'))
+    {
+        if (Pawn != None)
+            foreach Pawn.ChildActors(class'GoldenDragonGuardianLink', L) L.Destroy();
+        GotoState('PetWalking');
+        if (Pawn != None && Owner != None) RecallPet();
+    }
+
 	//MovePet(Character(Owner).Controller.Destination);
 	PetMoving();
 }
@@ -160,6 +178,21 @@ Begin:
 			bActionPlaying = false;
 		}
 	}
+}
+
+state GoldenDragonControlled
+{
+    function PetMoving() {}
+    function MovePet(vector Dest) {}
+    function RecallPet() {}
+    function AnimEnd(int Channel)
+    {
+        if (Channel == 0 && Pawn != None)
+        {
+            Guardian(Pawn).PlayAnimName = '';
+            bActionPlaying = False;
+        }
+    }
 }
 
 defaultproperties

@@ -1,0 +1,60 @@
+
+******** Loading object SkeletalMesh'PetPkg.GoldenDragonGuard' ********
+
+ERROR: TArray: index 20445 is out of range (20445)
+USkeletalMesh::BuildIndicesForLod <- ConvertLod <- USkeletalMesh::ConvertMesh <- USkeletalMesh::Serialize <- LoadObject: SkeletalMesh'PetPkg.GoldenDragonGuard', pos=F1C36A8, ver=128/29, game=ut2 <- UObject::EndLoad <- Main: umodel_build=1590
+
+
+******** Loading object SkeletalMesh'PetPkg.GoldenDragonGuard' ********
+
+ERROR: TArray: index 20445 is out of range (20445)
+USkeletalMesh::BuildIndicesForLod <- ConvertLod <- USkeletalMesh::ConvertMesh <- USkeletalMesh::Serialize <- LoadObject: SkeletalMesh'PetPkg.GoldenDragonGuard', pos=F1C369F, ver=128/29, game=ut2 <- UObject::EndLoad <- Main: umodel_build=1590
+
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonPearlSphere' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonEyeInlays' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonEyeRim' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonEyeAmber' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonEyeGold' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonEyePupil' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonEyeGlint' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonEyeRim' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonEyeAmber' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonEyeGold' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonEyePupil' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.
+
+******** Loading object StaticMesh'Sephiroth.GoldenDragonEyeGlint' ********
+
+Wrong package tag (39B4FBD4) in file Engine.u. Probably the file is encrypted.

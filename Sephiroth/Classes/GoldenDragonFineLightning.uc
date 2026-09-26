@@ -1,0 +1,41 @@
+class GoldenDragonFineLightning extends GoldenDragonLightning;
+defaultproperties
+{
+    Begin Object Class=BeamEmitter Name=GoldFineLightning
+        CoordinateSystem=PTCS_Relative
+        DetermineEndPointBy=PTEP_Offset
+        BeamEndPoints(0)=(Offset=(X=(Min=25,Max=25)),Weight=1)
+        RotatingSheets=3
+        BeamDistanceRange=(Min=25,Max=25)
+        StartVelocityRange=(X=(Min=0,Max=0))
+        UseColorScale=True
+        ColorScale(0)=(Color=(R=255,G=245,B=45,A=255))
+        ColorScale(1)=(RelativeTime=0.5,Color=(R=255,G=220,B=10,A=255))
+        ColorScale(2)=(RelativeTime=1,Color=(R=80,G=45,B=0,A=0))
+        ColorMultiplierRange=(X=(Min=1.5,Max=1.5),Y=(Min=1.5,Max=1.5),Z=(Min=1.5,Max=1.5))
+        MaxParticles=1
+        AutomaticInitialSpawning=False
+        InitialParticlesPerSecond=10
+        StartSizeRange=(X=(Min=0.35,Max=0.60),Y=(Min=1,Max=1),Z=(Min=1,Max=1))
+        LowFrequencyPoints=4
+        HighFrequencyPoints=7
+        LowFrequencyNoiseRange=(X=(Min=-0.4,Max=0.4),Y=(Min=-0.6,Max=0.6),Z=(Min=-0.6,Max=0.6))
+        HighFrequencyNoiseRange=(X=(Min=-0.5,Max=0.5),Y=(Min=-0.4,Max=0.4),Z=(Min=-0.4,Max=0.4))
+        DynamicHFNoiseRange=(Y=(Min=-0.4,Max=0.4),Z=(Min=-0.4,Max=0.4))
+        DynamicTimeBetweenNoiseRange=(Min=0.035,Max=0.055)
+        Texture=Texture'EffectTextureA.Common.particle05'
+        DrawStyle=PTDS_Additive
+        AlphaTest=False
+        ZTest=True
+        ZWrite=False
+        LifetimeRange=(Min=0.10,Max=0.16)
+        SecondsBeforeInactive=0
+    End Object
+    Emitters(0)=BeamEmitter'GoldFineLightning'
+    RemoteRole=ROLE_None
+    bHidden=False
+    bUnlit=True
+    bNoDelete=False
+    bCollideActors=False
+    AutoDestroy=False
+}

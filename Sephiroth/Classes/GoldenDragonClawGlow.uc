@@ -1,0 +1,60 @@
+class GoldenDragonClawGlow extends Emitter;
+defaultproperties
+{
+    Begin Object Class=SpriteEmitter Name=GoldPawLight
+        CoordinateSystem=PTCS_Relative
+        UseColorScale=True
+        ColorScale(0)=(Color=(R=255,G=235,B=100,A=255))
+        ColorScale(1)=(RelativeTime=0.5,Color=(R=255,G=200,B=35,A=255))
+        ColorScale(2)=(RelativeTime=1,Color=(R=90,G=35,B=0,A=0))
+        ColorMultiplierRange=(X=(Min=1.5,Max=1.5),Y=(Min=1.5,Max=1.5),Z=(Min=1.5,Max=1.5))
+        UniformSize=True
+        MaxParticles=5
+        AutomaticInitialSpawning=False
+        InitialParticlesPerSecond=14
+        StartLocationRange=(X=(Min=-2,Max=2),Y=(Min=-2,Max=2),Z=(Min=-2,Max=2))
+        StartSizeRange=(X=(Min=18,Max=24))
+        Texture=Texture'EffectTextureA.Common.particle05'
+        DrawStyle=PTDS_Additive
+        AlphaTest=False
+        ZTest=True
+        ZWrite=False
+        FadeOut=True
+        FadeOutStartTime=0.12
+        LifetimeRange=(Min=0.25,Max=0.35)
+        SecondsBeforeInactive=0
+    End Object
+    Emitters(0)=SpriteEmitter'GoldPawLight'
+    Begin Object Class=SpriteEmitter Name=PawElectricSkin
+        CoordinateSystem=PTCS_Relative
+        UseColorScale=True
+        ColorScale(0)=(Color=(R=255,G=245,B=85,A=255))
+        ColorScale(1)=(RelativeTime=0.4,Color=(R=255,G=210,B=15,A=255))
+        ColorScale(2)=(RelativeTime=1,Color=(R=0,G=0,B=0,A=0))
+        UniformSize=True
+        SpinParticles=True
+        StartSpinRange=(X=(Min=0,Max=1))
+        MaxParticles=4
+        AutomaticInitialSpawning=False
+        InitialParticlesPerSecond=22
+        StartLocationRange=(X=(Min=-4,Max=4),Y=(Min=-4,Max=4),Z=(Min=-5,Max=7))
+        StartSizeRange=(X=(Min=12,Max=19))
+        Texture=Texture'EffectTexture.effect001.elect02'
+        TextureUSubdivisions=4
+        TextureVSubdivisions=4
+        BlendBetweenSubdivisions=True
+        DrawStyle=PTDS_Additive
+        AlphaTest=False
+        ZTest=True
+        ZWrite=False
+        LifetimeRange=(Min=0.12,Max=0.18)
+        SecondsBeforeInactive=0
+    End Object
+    Emitters(1)=SpriteEmitter'PawElectricSkin'
+    bHidden=False
+    bUnlit=True
+    bNoDelete=False
+    bCollideActors=False
+    RemoteRole=ROLE_None
+    AutoDestroy=False
+}

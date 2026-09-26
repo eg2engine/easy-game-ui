@@ -105,3 +105,64 @@ UCC编译前须备份并移开Bin中的Sephiroth.u和SephirothUI.u，再从Bin�
 
 提交正式源码、本文档、测试脚本、AGENTS.md和.gitignore。不要提交 `.weapon-fx-work/` 或Bin构建目录。Git忽略规则不影响手动上传，手动上传时也应排除这两个目录。
 本次整理未永久删除历史产物，可从archive恢复；恢复实验类需重新检查引用并完整重编译。
+
+金龙表面光纹的最新修正在 `docs/GOLDEN_DRAGON_ORBIT.md` 的 D24 条目：改用两个同步骨骼姿态的透明网格层，保留原龙贴图；普通武器本身的材质和门槛未改。本地交付 `.weapon-fx-work/current/dragon-surface-d24/`，需客户端验证。
+
+金龙 D25 针对 D24 黑色覆盖撤回 Shader/ConstantColor 回退链，改为 ColorModifier + FB_Translucent，并检测渲染回退后撤下表面网格。详见 `docs/GOLDEN_DRAGON_ORBIT.md` D25；交付 `.weapon-fx-work/current/dragon-surface-d25/`，尚待客户端验证。
+
+金龙 D26 沿用 D25 表面材质，尾火按末端骨骼方向收束，头部金光/电纹增强，四爪局部动作触发爪下爆火，并移除所有金龙聊天/控制台诊断。详见 `docs/GOLDEN_DRAGON_ORBIT.md` D26；两份脚本交付 `.weapon-fx-work/current/dragon-fx-d26/`，不更换模型或配置。
+
+金龙 D27 按用户澄清恢复 D25 尾部爆火强度、保留尾骨顺向，龙头追加6段黄色电弧和额头/两颊3处局部黄光。四爪爆火、动作、表面材质和关闭打印保持 D26。详见 `docs/GOLDEN_DRAGON_ORBIT.md` D27；交付 `.weapon-fx-work/current/dragon-fx-d27/`。
+
+金龙 D28：红金流光叠加量2倍、头部电弧6→12、爪下外焰尺寸1.5倍；尾芯顺向，新增龙须细电、嘴前金色龙珠/微电弧及双侧后下方流火。详见 `docs/GOLDEN_DRAGON_ORBIT.md` D28；交付 `.weapon-fx-work/current/dragon-fx-d28/`，不换模型/配置，诊断仍关闭。
+
+金龙 D29 将龙珠改为内嵌脚本包的实体黄色球形网格，移至上下颌之间；12段短电弧贴球面，关联嘴侧流火同步移位。详见 `docs/GOLDEN_DRAGON_ORBIT.md` D29；交付 `.weapon-fx-work/current/dragon-fx-d29/`，仍只更新两份脚本包。
+
+金龙 D30 修正嘴内龙珠偏到上吻部的问题：改用上下颌局部内侧锚点，珠体、电弧和两侧火焰共同移位。详见 `docs/GOLDEN_DRAGON_ORBIT.md` D30；交付 `.weapon-fx-work/current/dragon-fx-d30/`，附离线红旧/绿新校准图。
+
+金龙 D31 新增 OrbitCrawlV9 环绕脊椎左右摆动，肩胯错相、尾段延迟跟随，保留D30光效/爪步/尺寸/环绕路线。详见 `docs/GOLDEN_DRAGON_ORBIT.md` D31；交付 `.weapon-fx-work/current/dragon-motion-d31/`，本次须同时更新 PetPkg.ukx 和两份脚本包，ini不变。
+
+
+金龙 D32：OrbitCrawlV10恢复原Run完整躯干旋转/起伏，增强步伐同步肩胯摆动和尾部跟随；环绕路径、大小与现有光效不变。详见 docs/GOLDEN_DRAGON_ORBIT.md D32；交付 .weapon-fx-work/current/dragon-motion-d32，须同时更新PetPkg.ukx与两份转换后的脚本包，ini不变。
+
+
+金龙 D33：OrbitCrawlV11新增胸腹至腰胯的延迟俯仰波及轴向扭转，补足侧面/仰视躯干变化；固定根骨、保留爪步与路线/光效。详见 docs/GOLDEN_DRAGON_ORBIT.md D33；交付 .weapon-fx-work/current/dragon-motion-d33，须同时更新PetPkg.ukx与两份转换后的脚本包，ini不变。
+
+
+金龙 D34：OrbitCrawlV12增强龙头横摆/抬压，头部波形提前约0.255秒、颈部分段承接到D33肩胯爪步；光效/路线/大小不变。详见 docs/GOLDEN_DRAGON_ORBIT.md D34；交付 .weapon-fx-work/current/dragon-motion-d34，PetPkg.ukx与两份转换后的脚本包须同时更新，ini不变。
+
+
+金龙 D35：OrbitCrawlV13对头颈/身躯/四爪做周期旋转平滑，保留主节奏和幅度；120帧60fps仍2秒，路线/速度/光效不变。详见 docs/GOLDEN_DRAGON_ORBIT.md D35；交付 .weapon-fx-work/current/dragon-motion-d35，PetPkg.ukx及两份转换后脚本包须同时更新，ini不变。
+
+
+金龙 D36：OrbitCrawlV14按主骨实际高度重做抬头→胸腹→腰胯→尾部的延迟起伏，增强抬头表现；环绕位置/速度/光效不变。详见 docs/GOLDEN_DRAGON_ORBIT.md D36；交付 .weapon-fx-work/current/dragon-motion-d36，动画包和两份转换后的脚本包须一起换，ini不变。
+
+
+金龙 D37：OrbitCrawlV15实现一高一低回位、抬头峰值约增26%；动作倍率2/OrbitPeriod匹配稳定环绕周期，半径/转圈速度/光效不改。详见 docs/GOLDEN_DRAGON_ORBIT.md D37；交付 .weapon-fx-work/current/dragon-motion-d37，动画包与两份转换后脚本包须一起换，ini不变。
+
+
+金龙 D38：OrbitCrawlV16让原固定肩背/颈根连接点参与波形，胸腹起伏增大，抬头峰值降低20%；一圈一轮、半径/速度/光效保持D37。详见 docs/GOLDEN_DRAGON_ORBIT.md D38；交付 .weapon-fx-work/current/dragon-motion-d38，动画包及两份转换后的脚本包一起换，ini不变。
+
+
+金龙D39：参考044242外部动作合集，OrbitCrawlV17改用沿身体长度延迟的弧形路径，移除固定背弯并收敛抬头。100间距、速度、大小及光效沿用D38；详见docs/GOLDEN_DRAGON_ORBIT.md D39。交付 .weapon-fx-work/current/dragon-motion-d39，三文件一起更新，ini不变。
+
+
+金龙D40：原地Pain不再退出环绕；新增RunFlowV1平滑跑动，保留原步频、四爪主要节奏，加入头颈至尾部连续起伏。D39环绕、间距/大小/速度/光效不变。详见docs/GOLDEN_DRAGON_ORBIT.md D40，交付 .weapon-fx-work/current/dragon-motion-d40，三文件一起更新，ini不变。
+
+
+金龙D41：RunFlowV2四肢角幅分层增加，普通跑动1.35倍速；环绕/受击修复/光效不变。交付 .weapon-fx-work/current/dragon-motion-d41，三文件一起更新。眼睛仅建议方案，见docs/GOLDEN_DRAGON_EYES_PROPOSAL.md，未加入效果包。
+
+
+金龙D42已实现双眼虹膜/竖瞳/小高光，达标附贴眼金光与眼尾细电弧，沿现有门槛。保留D41跑动。交付 .weapon-fx-work/current/dragon-eyes-d42，更新两份u转spg；PetPkg与D41一致。详见docs/GOLDEN_DRAGON_ORBIT.md D42及眼睛设计文档。
+
+
+金龙D43：新增RunFlowV3，四爪对角交替爬行，增加肩胯/四爪侧摆，收小上下浮动；普通跟跑1.35→1.7倍速。D42眼部及所有装备光效、资格规则保持。交付.weapon-fx-work/current/dragon-motion-d43，三文件一起更新；详见GOLDEN_DRAGON_ORBIT.md。
+
+
+金龙D44：参照QQ20260925-114123重制RunFlowV4，头颈到尾尖连续上下波浪，四爪配合各自身段收拢/后划，约1.60秒一轮。原站立环绕、眼部及装备光效、资格规则保持。交付.weapon-fx-work/current/dragon-motion-d44，三文件一起更新，详见GOLDEN_DRAGON_ORBIT.md。
+
+
+金龙D45：RunFlowV5四肢参照OrbitCrawlV17收拢，保留轻微屈伸；D44身体游动和1.60秒节奏保持。光效/眼部/资格规则不变。交付.weapon-fx-work/current/dragon-motion-d45，三文件一起更新，INI不改。
+
+
+金龙D46：Run/环绕改为持续双通道混合，短停跳过中间Idle，返回右侧提前展开并制动，原地短动画防抖与转向位置/朝向同步。D45动画资源及全部光效/资格规则不变。交付.weapon-fx-work/current/dragon-motion-d46；已有D45仅需更新两个脚本包，INI不改。原生混合实际显示待客户端验证。
