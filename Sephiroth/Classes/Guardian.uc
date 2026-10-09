@@ -1,3 +1,4 @@
+// 维护宠物宿主，换主人、换模型及销毁前清理金龙增强。
 class Guardian extends Character
 	native;
 
@@ -87,9 +88,19 @@ function InitPetSize()
 	}
 }
 
+// 主人更换前清理旧金龙增强，不向旧宿主恢复状态。
 function SetOwnPlayer(Character Player)
 {
+	if (Player != OwnPlayer)
+		class'GoldenDragonGuardianLink'.static.StopForHost(Self, False);
 	OwnPlayer = Player;
+}
+
+// 销毁时先停止所属增强或效果，再执行父类清理。
+event Destroyed()
+{
+	class'GoldenDragonGuardianLink'.static.StopForHost(Self, False);
+	Super.Destroyed();
 }
 
 function SetPosition(INT Position)
@@ -127,8 +138,10 @@ function SetPosition(INT Position)
 
 native final function bool LoadModel(string NewMeshName, string NewAnimName);
 
+// 加载新模型前有条件恢复旧金龙宿主，随后沿用原有模型加载流程。
 function bool ChangePetMesh(string NewMeshName, string NewAnimName)
 {
+	class'GoldenDragonGuardianLink'.static.StopForHost(Self, True);
 	if(LoadModel(NewMeshName, NewAnimName))
 	{
 		if(Shadow != None && !Shadow.bDeleteMe) {

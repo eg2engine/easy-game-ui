@@ -1,3 +1,4 @@
+// 管理金龙身体、眼部和表面光效，主人失效或变身时停止并清理。
 class GoldenDragonBodyFxLink extends Actor;
 var Guardian Dragon;
 var GoldenDragonEyes Eyes;
@@ -30,6 +31,7 @@ var bool bSurfaceApplied;
 var bool bSurfaceUnsupported;
 var int SurfaceLayerCount;
 var string FxState;
+var bool bStopping;
 
 // One texture and a vertex-color modifier, without Shader/ConstantColor fallbacks.
 simulated function FinalBlend MakeSurfaceLayer(Material Pattern, byte R, byte G, byte B)
@@ -62,10 +64,13 @@ simulated function bool SurfaceRenderRejected()
     return False;
 }
 
+// 停止后禁止创建表面覆盖；正常更新沿用现有材质配置。
 simulated function ApplySurface()
 {
     local Material Plasma, LightMove;
     local int I;
+    if (bStopping)
+        return;
     if (bSurfaceUnsupported || SurfaceRenderRejected())
     {
         bSurfaceUnsupported=True;
@@ -97,21 +102,30 @@ simulated function ApplySurface()
     bSurfaceApplied=SurfaceLayerCount==4;
 }
 
+// 先清空覆盖层引用，再停止并销毁旧层，避免清理回调重入旧引用。
 simulated function RestoreSurface()
 {
     local int I;
+    local GoldenDragonSurfaceLayer OldLayer;
     for (I=0; I<4; I++)
     {
-        if (SurfaceLayers[I]!=None) SurfaceLayers[I].Destroy();
+        OldLayer=SurfaceLayers[I];
         SurfaceLayers[I]=None;
+        if (OldLayer!=None)
+        {
+            OldLayer.StopWork();
+            if (!OldLayer.bDeleteMe) OldLayer.Destroy();
+        }
     }
     SurfaceLayerCount=0;
     bSurfaceApplied=False;
 }
 
+// 先清空各子效果引用再销毁，重置统计与运动历史以停止本轮光效。
 simulated function ClearLights()
 {
     local int I;
+    local Actor OldEffect;
     LiveLights=0;
     LiveArcs=0;
     RenderedParticles=0;
@@ -120,47 +134,72 @@ simulated function ClearLights()
     RestoreSurface();
     for (I=0; I<12; I++)
     {
-        if (HeadArcs[I]!=None) HeadArcs[I].Destroy();
+        OldEffect=HeadArcs[I];
         HeadArcs[I]=None;
+        if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
     }
-    if (Pearl!=None) Pearl.Destroy();
+    OldEffect=Pearl;
     Pearl=None;
+    if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
     for (I=0; I<2; I++)
     {
-        if (MouthFlames[I]!=None) MouthFlames[I].Destroy();
+        OldEffect=MouthFlames[I];
         MouthFlames[I]=None;
+        if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
     }
     for (I=0; I<4; I++)
     {
-        if (WhiskerArcs[I]!=None) WhiskerArcs[I].Destroy();
+        OldEffect=WhiskerArcs[I];
         WhiskerArcs[I]=None;
+        if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
     }
     for (I=0; I<12; I++)
     {
-        if (PearlArcs[I]!=None) PearlArcs[I].Destroy();
+        OldEffect=PearlArcs[I];
         PearlArcs[I]=None;
+        if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
     }
     bPawHistoryReady=False;
     for (I=0; I<4; I++)
     {
-        if (PawBursts[I]!=None) PawBursts[I].Destroy();
+        OldEffect=PawBursts[I];
         PawBursts[I]=None;
         PawBurstCooldown[I]=0;
+        if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
     }
     for (I=0; I<30; I++)
     {
-        if (Arcs[I]!=None) Arcs[I].Destroy();
+        OldEffect=Arcs[I];
         Arcs[I]=None;
+        if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
     }
-    if (TailFx!=None) TailFx.Destroy();
+    OldEffect=TailFx;
     TailFx=None;
-    if (TailBurst!=None) TailBurst.Destroy();
+    if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
+    OldEffect=TailBurst;
     TailBurst=None;
+    if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
     for (I=0; I<18; I++)
     {
-        if (Lights[I] != None) Lights[I].Destroy();
+        OldEffect=Lights[I];
         Lights[I] = None;
+        if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
     }
+}
+
+// 幂等地永久停止更新并清理所属资源；不在此函数内递归销毁自身。
+simulated function StopWork()
+{
+    if (bStopping)
+        return;
+    bStopping=True;
+    Disable('Tick');
+    Dragon=None;
+    bEligible=False;
+    ClearEyes();
+    ClearLights();
+    SurfaceMaterials[0]=None;
+    SurfaceMaterials[1]=None;
 }
 
 static function int AffixCount(SephirothItem Item)
@@ -320,20 +359,36 @@ simulated function UpdateMouthEffects(vector Forward, vector Side, vector Up, fl
     }
 }
 
+// 先清空眼部引用，再停止并销毁眼部效果。
 simulated function ClearEyes()
 {
-    if (Eyes!=None) Eyes.Destroy();
+    local GoldenDragonEyes OldEyes;
+    OldEyes=Eyes;
     Eyes=None;
+    if (OldEyes!=None)
+    {
+        OldEyes.StopWork();
+        if (!OldEyes.bDeleteMe) OldEyes.Destroy();
+    }
 }
 
+// 所属角色可用且未变身时更新骨骼光效；失效时永久停止并清理。
 simulated function UpdateEffects(float DT)
 {
     local int I,J,K;
     local vector P,Direction,Side,Up,A,B,LocalP;
     local vector Points[18],Shell[28];
     local float Angle,Radius,PawSpeed;
+    if (bStopping)
+        return;
     Dragon=Guardian(Owner);
-    if (Dragon==None || Dragon.bDeleteMe || Dragon.OwnPlayer==None) { Destroy(); return; }
+    if (Dragon==None || Dragon.bDeleteMe
+        || class'FxLifecyclePolicy'.static.GetHeroState(Hero(Dragon.OwnPlayer)) != 'Ready')
+    {
+        StopWork();
+        Destroy();
+        return;
+    }
     CheckDelay-=DT;
     if (CheckDelay<=0)
     {
@@ -445,10 +500,10 @@ simulated function UpdateEffects(float DT)
     if (TailFx==None || TailFx.bDeleteMe) TailFx=Spawn(class'GoldenDragonTailTrail',Self,,P);
     if (TailFx!=None) { TailFx.SetLocation(P); TailFx.SetRotation(Dragon.Rotation); }
 }
+// 销毁时先停止所属增强或效果，再执行父类清理。
 simulated event Destroyed()
 {
-    ClearEyes();
-    ClearLights();
+    StopWork();
     Super.Destroyed();
 }
 defaultproperties

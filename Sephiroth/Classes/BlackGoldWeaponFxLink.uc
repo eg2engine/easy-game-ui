@@ -1,4 +1,5 @@
 // Script-only hardening; retain V40 visuals and the five-distinct-affix gate.
+// 管理黑金武器资格、重试及效果生命周期，变身时暂停并在正常形态恢复。
 class BlackGoldWeaponFxLink extends Actor config(WeaponFxDiagnostics);
 
 var Attachment Weapon;
@@ -17,6 +18,7 @@ var int StatusMount;
 var bool bEligible;
 var array<name> TracedStages;
 var array<int> TracedValues;
+var bool bStopping, bSuspended;
 
 // WornItems slot constants (this UE2 compiler lacks class-qualified const access).
 const EquipRightHand = 8;
@@ -109,6 +111,7 @@ static function int GetMountSlot(Attachment W)
     return -1;
 }
 
+// 核对当前模型短名称；避免将整个模型对象转换为含 Outer 路径的字符串。
 static function bool MatchesModel(Attachment W, SephirothItem Item)
 {
     local string Key;
@@ -117,8 +120,8 @@ static function bool MatchesModel(Attachment W, SephirothItem Item)
     Key = ModelKey(Item.ModelName);
     if (Key == "")
         return False;
-    return (W.Mesh != None && Key == ModelKey(string(W.Mesh)))
-        || (W.StaticMesh != None && Key == ModelKey(string(W.StaticMesh)));
+    return Key == ModelKey(W.GetMeshName())
+        || (W.StaticMesh != None && Key == ModelKey(string(W.StaticMesh.Name)));
 }
 
 static function SephirothItem ResolveItem(Attachment W)
@@ -196,6 +199,7 @@ static function int ModelGender(string ModelName)
     return -1;
 }
 
+// 按装备与实际模型选择光效，保留拳套性别及模型冲突校验。
 static function class<DesignedWeaponFxBase> EffectClassFor(Attachment W, SephirothItem Item)
 {
     local string Key, MeshKey, StaticKey;
@@ -208,15 +212,15 @@ static function class<DesignedWeaponFxBase> EffectClassFor(Attachment W, Sephiro
     // None guards do not claim to validate arbitrary corrupted native pointers.
     Gender = -1;
     StaticGender = -1;
-    if (W.Mesh != None)
+    MeshKey = RawModelKey(W.GetMeshName());
+    if (MeshKey != "")
     {
-        MeshKey = RawModelKey(string(W.Mesh));
         Gender = ModelGender(MeshKey);
         MeshKey = ModelKey(MeshKey);
     }
     if (W.StaticMesh != None)
     {
-        StaticKey = RawModelKey(string(W.StaticMesh));
+        StaticKey = RawModelKey(string(W.StaticMesh.Name));
         StaticGender = ModelGender(StaticKey);
         StaticKey = ModelKey(StaticKey);
     }
@@ -284,15 +288,47 @@ simulated function ClearVisual()
         OldVisual.Destroy();
 }
 
+// 清除当前资格、重试和效果；保留本 Link 已记录的粒子结构异常。
 simulated function ResetActive()
 {
-    ClearVisual();
     ActiveItem = None;
     ActiveClass = None;
     bEligible = False;
     RetryDelay = 0;
     RetryAttempt = 0;
+    ClearVisual();
     // InvalidDetailClasses deliberately survives unequip/re-equip on this Link.
+}
+
+// 暂时清除效果与资格缓存；数据或形态恢复后允许重新建立。
+simulated function SuspendEffects()
+{
+    if (bStopping || bSuspended)
+        return;
+    bSuspended = True;
+    CheckDelay = 0;
+    ResetActive();
+}
+
+// 幂等地永久停止更新并清理所属资源；不在此函数内递归销毁自身。
+simulated function StopWork()
+{
+    if (bStopping)
+        return;
+    bStopping = True;
+    bSuspended = True;
+    Disable('Tick');
+    CheckDelay = 0;
+    Weapon = None;
+    ResetActive();
+}
+
+// 仅在 Link 和所属角色均可更新时返回真，供粒子更新前检查。
+simulated function bool CanUpdateDetail()
+{
+    if (bStopping || bSuspended || Weapon == None || Weapon.bDeleteMe)
+        return False;
+    return class'FxLifecyclePolicy'.static.GetHeroState(Hero(Weapon.Base)) == 'Ready';
 }
 
 // Fixed stage names and primitive values only. Never stringify a UObject here.
@@ -382,6 +418,7 @@ simulated function ScheduleRetry()
     TraceStage('RetryStep', RetryAttempt);
 }
 
+// 每帧先判断角色生命周期，变身或数据未就绪时暂停；恢复后重新读取装备与资格。
 simulated event Tick(float DeltaTime)
 {
     local SephirothItem Item;
@@ -389,10 +426,34 @@ simulated event Tick(float DeltaTime)
     local DesignedWeaponFxBase Fx;
     local ClientController CC;
     local Hero H;
+    local name HeroState;
+    if (bStopping)
+        return;
     if (Weapon == None || Weapon.bDeleteMe)
     {
+        StopWork();
         Destroy();
         return;
+    }
+    H = Hero(Weapon.Base);
+    HeroState = class'FxLifecyclePolicy'.static.GetHeroState(H);
+    if (HeroState != 'Ready')
+    {
+        SuspendEffects();
+        if (HeroState == 'Transformed')
+            SetStatus('Transformed');
+        else if (HeroState == 'Unavailable')
+            SetStatus('WaitingMount');
+        else
+            SetStatus('WaitingData');
+        return;
+    }
+    if (bSuspended)
+    {
+        bSuspended = False;
+        CheckDelay = 0;
+        RetryDelay = 0;
+        RetryAttempt = 0;
     }
     if (Visual != None && !Visual.bDeleteMe)
         Visual.bHidden = Weapon.bHidden;
@@ -408,7 +469,6 @@ simulated event Tick(float DeltaTime)
         SetStatus('WaitingMount');
         return;
     }
-    H = Hero(Weapon.Base);
     CC = ClientController(H.Controller);
     if (CC == None || CC.bDeleteMe || CC.PSI == None || CC.PSI.WornItems == None)
     {
@@ -543,9 +603,10 @@ simulated event Tick(float DeltaTime)
         ScheduleRetry();
 }
 
+// 销毁时先停止所属增强或效果，再执行父类清理。
 simulated event Destroyed()
 {
-    ResetActive();
+    StopWork();
     Super.Destroyed();
 }
 

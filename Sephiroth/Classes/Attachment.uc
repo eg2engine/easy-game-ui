@@ -1,3 +1,4 @@
+// 维护装备挂件及关联效果，销毁前先停止黑金辅助对象。
 class Attachment extends Actor
 	native
 	placeable;
@@ -103,8 +104,28 @@ function DestroyActionEffect()
 	//	DivineEffect.SetDrawScale(DivineClass.Default.DrawScale);
 }
 
+// 挂件销毁前停止并销毁黑金 Link，随后执行原清理。
 event Destroyed()
 {
+	local BlackGoldWeaponFxLink Link;
+	local array<BlackGoldWeaponFxLink> Links;
+	local int I;
+
+	foreach ChildActors(class'BlackGoldWeaponFxLink', Link)
+	{
+		Links.Length = Links.Length + 1;
+		Links[Links.Length - 1] = Link;
+	}
+	for (I = 0; I < Links.Length; I++)
+	{
+		Link = Links[I];
+		if (Link != None)
+		{
+			Link.StopWork();
+			if (!Link.bDeleteMe)
+				Link.Destroy();
+		}
+	}
 	Super.Destroyed();
 	if ( DivineEffect != None ) 
 	{

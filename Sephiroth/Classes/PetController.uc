@@ -1,3 +1,4 @@
+// 驱动宠物行为，角色生命周期允许时建立金龙增强，失效时恢复普通宠物控制。
 class PetController extends AIController
 	native;
 
@@ -7,25 +8,37 @@ var bool bDead;
 
 function bool CanStop(float Distance);
 
+// 每帧先检查所属对象的停止或生命周期状态，失效时不继续访问效果资源。
 event Tick(float DeltaTime)
 {
     local GoldenDragonGuardianLink L;
-    if (class'GoldenDragonGuardianLink'.Static.IsDragon(Guardian(Pawn)))
+    local Guardian Host;
+    local bool bHostReady;
+
+    Host = Guardian(Pawn);
+    bHostReady = Host != None && !Host.bDeleteMe && Host.OwnPlayer == Owner
+        && class'FxLifecyclePolicy'.static.GetHeroState(Hero(Host.OwnPlayer)) == 'Ready';
+    if (bHostReady && class'GoldenDragonGuardianLink'.Static.IsDragon(Host))
     {
         if (!IsInState('GoldenDragonControlled')) GotoState('GoldenDragonControlled');
         foreach Pawn.ChildActors(class'GoldenDragonGuardianLink', L)
-            if (!L.bDeleteMe) { L.UpdateDragon(DeltaTime); return; }
+            if (!L.bDeleteMe && !L.bStopping) { L.UpdateDragon(DeltaTime); return; }
         L = Spawn(class'GoldenDragonGuardianLink', Pawn);
         if (L != None) L.UpdateDragon(DeltaTime);
         return;
     }
     if (IsInState('GoldenDragonControlled'))
     {
-        if (Pawn != None)
-            foreach Pawn.ChildActors(class'GoldenDragonGuardianLink', L) L.Destroy();
+        if (Host != None)
+            class'GoldenDragonGuardianLink'.static.StopForHost(Host,
+                !Host.bDeleteMe && Owner != None && !Owner.bDeleteMe && Host.OwnPlayer == Owner);
         GotoState('PetWalking');
-        if (Pawn != None && Owner != None) RecallPet();
+        if (Host != None && !Host.bDeleteMe && Owner != None && !Owner.bDeleteMe)
+            RecallPet();
     }
+
+    if (Pawn == None || Pawn.bDeleteMe || Owner == None || Owner.bDeleteMe)
+        return;
 
 	//MovePet(Character(Owner).Controller.Destination);
 	PetMoving();
@@ -185,9 +198,12 @@ state GoldenDragonControlled
     function PetMoving() {}
     function MovePet(vector Dest) {}
     function RecallPet() {}
+    // 仅对仍有有效主人的宠物处理基础通道动画结束。
     function AnimEnd(int Channel)
     {
-        if (Channel == 0 && Pawn != None)
+        if (Channel == 0 && Pawn != None && !Pawn.bDeleteMe
+            && Guardian(Pawn) != None && Guardian(Pawn).OwnPlayer != None
+            && !Guardian(Pawn).OwnPlayer.bDeleteMe)
         {
             Guardian(Pawn).PlayAnimName = '';
             bActionPlaying = False;

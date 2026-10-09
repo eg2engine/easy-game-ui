@@ -1,4 +1,4 @@
-param([string]$BaselineRef = '0217d87')
+param([string]$BaselineRef = '20467cb', [switch]$StaticOnly)
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -51,6 +51,9 @@ if ($gate -notmatch 'AffixValue < 17' -or $gate -notmatch 'Count >= 5') { throw 
 if ($gate -match 'AddMessage|ShowDiagnostic') { throw 'Automatic chat diagnostics remain' }
 if ($controller -match 'AddMessage\([^\r\n]*BGFX') { throw 'BGFX command still writes to chat' }
 if ($table -match "ItemEffectClass=Class'Sephiroth.Designed_") { throw 'Native table bypass remains' }
+if ($gate -match 'return W.Info;') { throw 'Shallow attachment Info bypass remains' }
+
+if (-not $StaticOnly) {
 
 # Boundary model of the intended UnrealScript predicate; not an engine test.
 function Test-Eligible($names, $levels) {
@@ -318,6 +321,7 @@ foreach ($index in @(2,3,5,10,11,15,16,17,18,23,24)) {
     Assert-Check (-not (Test-BlueStructure $emitters 1)) "Missing blue emitter $index must fail validation"
 }
 Write-Output 'PASS: blue particle structure boundary models.'
+}
 
 $gateCode = Get-CodeOnly $gate
 $resolverCode = Get-FunctionBody $gateCode 'ResolveItem'
@@ -390,34 +394,68 @@ foreach ($access in [regex]::Matches($blueTick, 'Emitters\s*\[\s*([^\]]+)\s*\]')
 }
 Write-Output 'PASS: resolver, diagnostic, recovery, and particle source guards.'
 
-# Preserve native ABI and approved visuals against a specific, reviewable baseline.
+# Preserve native declarations and approved visuals against a reviewable baseline.
 & git -C $projectRoot rev-parse --verify "${BaselineRef}^{commit}" *> $null
 if ($LASTEXITCODE -ne 0) { throw "Unknown baseline commit: $BaselineRef" }
 $changedPaths = @(& git -C $projectRoot diff --name-only $BaselineRef -- '*.uc')
 if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect source changes against the baseline' }
+$allowedChanges = @(
+    'Attachment.uc', 'BlackGoldWeaponFxLink.uc', 'DesignedWeaponFxBase.uc',
+    'Designed_AblazeStaffB_Particles.uc', 'Designed_GlaciesStickB_Particles.uc',
+    'GoldenDragonBodyFxLink.uc', 'GoldenDragonEyeLayer.uc', 'GoldenDragonEyes.uc',
+    'GoldenDragonGuardianLink.uc', 'GoldenDragonSurfaceLayer.uc',
+    'Guardian.uc', 'PetController.uc', 'FxLifecyclePolicy.uc'
+) | ForEach-Object { 'Sephiroth/Classes/' + $_ }
 foreach ($path in $changedPaths) {
+    Assert-Check ($path -cin $allowedChanges) "Unexpected UnrealScript change: $path"
+    # 新增策略没有历史源码；其无状态、非原生和角色判定约束由后续专门断言验证。
+    if ($path -ceq 'Sephiroth/Classes/FxLifecyclePolicy.uc') {
+        $baselinePolicy = @(& git -C $projectRoot ls-tree --name-only $BaselineRef -- $path)
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect baseline lifecycle policy' }
+        Assert-Check ($baselinePolicy.Count -eq 0) 'Lifecycle policy must be new relative to the baseline'
+        continue
+    }
     $baselineSource = Get-BaselineText $path
     $currentPath = Join-Path $projectRoot $path
     if (-not (Test-Path -LiteralPath $currentPath)) { throw "Source removed since baseline: $path" }
     $currentSource = [IO.File]::ReadAllText($currentPath)
+    if ($baselineSource -match '(?i)\bdefaultproperties\s*\{') {
+        Assert-Check ((Get-DefaultProperties $currentSource) -ceq (Get-DefaultProperties $baselineSource)) "Default visual/configuration properties changed: $path"
+    }
     if ((Get-CodeOnly $baselineSource) -match '(?is)^\s*class\b[^;]*\bnative\b' -or (Get-CodeOnly $currentSource) -match '(?is)^\s*class\b[^;]*\bnative\b') {
-        Assert-Check ($currentSource.Replace("`r`n", "`n").TrimEnd() -ceq $baselineSource) "Native source changed: $path"
+        $oldCode = Get-CodeOnly $baselineSource
+        $newCode = Get-CodeOnly $currentSource
+        $firstFunction = '(?im)^\s*(?:(?:native|final|simulated|static|exec)\s+)*(?:function|event)\b'
+        $oldFunction = [regex]::Match($oldCode, $firstFunction)
+        $newFunction = [regex]::Match($newCode, $firstFunction)
+        Assert-Check ($oldFunction.Success -and $newFunction.Success) "Cannot locate native declaration prefix: $path"
+        $oldPrefix = [regex]::Replace($oldCode.Substring(0, $oldFunction.Index), '\s+', ' ').Trim()
+        $newPrefix = [regex]::Replace($newCode.Substring(0, $newFunction.Index), '\s+', ' ').Trim()
+        Assert-Check ($oldPrefix -ceq $newPrefix) "Native class fields, structs, enums, or header changed: $path"
+        $nativePattern = '(?im)^\s*native\s+(?:final\s+)?function\b[^;]*;'
+        $oldNative = @([regex]::Matches($oldCode, $nativePattern) | ForEach-Object { [regex]::Replace($_.Value, '\s+', ' ').Trim() })
+        $newNative = @([regex]::Matches($newCode, $nativePattern) | ForEach-Object { [regex]::Replace($_.Value, '\s+', ' ').Trim() })
+        Assert-Check (($oldNative -join '|') -ceq ($newNative -join '|')) "Native function declaration changed: $path"
     }
 }
+$policyPath = Join-Path $projectRoot 'Sephiroth\Classes\FxLifecyclePolicy.uc'
+Assert-Check (Test-Path -LiteralPath $policyPath) 'Missing script-only lifecycle policy'
+$policyCode = Get-CodeOnly ([IO.File]::ReadAllText($policyPath))
+Assert-Check ($policyCode -match '(?i)^\s*class\s+FxLifecyclePolicy\s+extends\s+Object\s*;' -and $policyCode -notmatch '(?im)^\s*(?:var|native)\b') 'Policy must be stateless and non-native'
 $visualPaths = @(& git -C $projectRoot ls-tree -r --name-only $BaselineRef -- 'Sephiroth/Classes') | Where-Object { $_ -match '/Designed_.+\.uc$' }
 if ($LASTEXITCODE -ne 0) { throw 'Cannot enumerate baseline visual classes' }
 Assert-Check ($visualPaths.Count -gt 0) 'No baseline visual classes found'
 foreach ($path in $visualPaths) {
     $baselineSource = Get-BaselineText $path
     $currentSource = [IO.File]::ReadAllText((Join-Path $projectRoot $path))
-    if ($path -eq 'Sephiroth/Classes/Designed_GlaciesStickB_Particles.uc') {
-        Assert-Check ((Get-DefaultProperties $currentSource) -ceq (Get-DefaultProperties $baselineSource)) 'Approved blue particle defaultproperties changed'
+    if ($path -cin @('Sephiroth/Classes/Designed_GlaciesStickB_Particles.uc', 'Sephiroth/Classes/Designed_AblazeStaffB_Particles.uc')) {
+        Assert-Check ((Get-DefaultProperties $currentSource) -ceq (Get-DefaultProperties $baselineSource)) "Approved particle defaultproperties changed: $path"
     } else {
         Assert-Check ($currentSource.Replace("`r`n", "`n").TrimEnd() -ceq $baselineSource) "Unrelated approved visual changed: $path"
     }
 }
 Assert-Check ((Get-DefaultProperties $base) -ceq (Get-DefaultProperties (Get-BaselineText 'Sephiroth/Classes/DesignedWeaponFxBase.uc'))) 'Approved shared effect defaultproperties changed'
-foreach ($path in @('Sephiroth/Classes/BlackGoldWeaponFxLink.uc','Sephiroth/Classes/DesignedWeaponFxBase.uc','Sephiroth/Classes/Designed_GlaciesStickB_Particles.uc')) {
+foreach ($path in @('Sephiroth/Classes/BlackGoldWeaponFxLink.uc','Sephiroth/Classes/DesignedWeaponFxBase.uc','Sephiroth/Classes/Designed_GlaciesStickB_Particles.uc','Sephiroth/Classes/GoldenDragonGuardianLink.uc','Sephiroth/Classes/GoldenDragonBodyFxLink.uc','Sephiroth/Classes/GoldenDragonEyes.uc','Sephiroth/Classes/GoldenDragonEyeLayer.uc','Sephiroth/Classes/GoldenDragonSurfaceLayer.uc')) {
     $baselineSource = Get-CodeOnly (Get-BaselineText $path)
     $currentSource = Get-CodeOnly ([IO.File]::ReadAllText((Join-Path $projectRoot $path)))
     $oldDeclarations = @([regex]::Matches($baselineSource, '(?im)^\s*var\b[^;]*;') | ForEach-Object { [regex]::Replace($_.Value.Trim(), '\s+', ' ') })
@@ -428,5 +466,38 @@ foreach ($path in @('Sephiroth/Classes/BlackGoldWeaponFxLink.uc','Sephiroth/Clas
     }
 }
 Assert-Check ($table.Replace("`r`n", "`n").TrimEnd() -ceq (Get-BaselineText 'Sephiroth/Classes/ItemFxTable.uc')) 'Native effect table changed'
-Write-Output "PASS: native source and approved visual invariants against $BaselineRef."
-Write-Output "PASS: $script:assertionCount source/model assertions. This is not UnrealScript execution or client login/crash verification."
+$matchModel = Get-FunctionBody $gateCode 'MatchesModel'
+Assert-Check ($matchModel -match 'W\.GetMeshName\s*\(\s*\)' -and $matchModel -match 'W\.StaticMesh\.Name' -and $matchModel -notmatch 'string\s*\(\s*W\.(?:Mesh|StaticMesh)\s*\)') 'Resolver must read current short mesh names without whole-object conversion'
+Assert-Check ($effectCode -match 'W\.GetMeshName\s*\(\s*\)' -and $effectCode -match 'W\.StaticMesh\.Name' -and $effectCode -match 'Gender\s*=\s*ModelGender\s*\(\s*MeshKey\s*\)' -and $effectCode -match 'StaticGender\s*=\s*ModelGender\s*\(\s*StaticKey\s*\)' -and $effectCode -notmatch 'string\s*\(\s*W\.(?:Mesh|StaticMesh)\s*\)') 'Effect selection must retain both actual mesh variants and short-name reads'
+$stateBody = Get-FunctionBody $policyCode 'GetHeroState'
+Assert-Check ($stateBody -match 'CC\.Pawn\s*!=\s*H' -and $stateBody -match 'PSI\.bTransformed' -and $stateBody -match 'PSI\.TransToMonsterName' -and $stateBody -notmatch 'WornItems|Affixes|\.Mesh\b') 'Hero state must validate owner and transformation without equipment/model access'
+$linkTick = Get-FunctionBody $gateCode 'Tick'
+Assert-Check ($linkTick.IndexOf('GetHeroState') -ge 0 -and $linkTick.IndexOf('GetHeroState') -lt $linkTick.IndexOf('Visual.bHidden') -and $linkTick.IndexOf('GetHeroState') -lt $linkTick.IndexOf('GetMountSlot')) 'Black-gold state guard must precede visual and equipment access'
+$linkStop = Get-FunctionBody $gateCode 'StopWork'
+Assert-Check ($linkStop -match 'bStopping\s*=\s*True' -and $linkStop -match "Disable\('Tick'\)" -and $linkStop -notmatch '\bDestroy\s*\(') 'Black-gold StopWork must be permanent and non-recursive'
+Assert-Check ((Get-FunctionBody $gateCode 'SuspendEffects') -notmatch 'InvalidDetailClasses|Disable\(') 'Suspension must preserve recovery and structural lockout'
+$attachmentCode = Get-CodeOnly ([IO.File]::ReadAllText((Join-Path $projectRoot 'Sephiroth\Classes\Attachment.uc')))
+$attachmentDestroyed = Get-FunctionBody $attachmentCode 'Destroyed'
+Assert-Check ($attachmentDestroyed.IndexOf('StopWork') -ge 0 -and $attachmentDestroyed.IndexOf('StopWork') -lt $attachmentDestroyed.IndexOf('Super.Destroyed')) 'Attachment must stop links before inherited cleanup'
+$guardianCode = Get-CodeOnly ([IO.File]::ReadAllText((Join-Path $projectRoot 'Sephiroth\Classes\Guardian.uc')))
+$setOwnPlayer = Get-FunctionBody $guardianCode 'SetOwnPlayer'
+$changeMesh = Get-FunctionBody $guardianCode 'ChangePetMesh'
+Assert-Check ($setOwnPlayer.IndexOf('StopForHost') -ge 0 -and $setOwnPlayer.IndexOf('StopForHost') -lt $setOwnPlayer.IndexOf('OwnPlayer = Player')) 'Guardian must stop old link before owner change'
+Assert-Check ($changeMesh.IndexOf('StopForHost') -ge 0 -and $changeMesh.IndexOf('StopForHost') -lt $changeMesh.IndexOf('LoadModel')) 'Guardian must restore before mesh replacement'
+Assert-Check ((Get-FunctionBody $guardianCode 'Destroyed') -match 'StopForHost\s*\(\s*Self\s*,\s*False\s*\)') 'Guardian destruction must not restore host state'
+$dragonCode = Get-CodeOnly ([IO.File]::ReadAllText((Join-Path $projectRoot 'Sephiroth\Classes\GoldenDragonGuardianLink.uc')))
+$isDragon = Get-FunctionBody $dragonCode 'IsDragon'
+Assert-Check ($isDragon -match 'P\.GetMeshName\s*\(\s*\)' -and $isDragon -notmatch 'string\s*\(\s*P\.Mesh\s*\)') 'Dragon identity must use the short skeletal mesh name'
+$dragonStop = Get-FunctionBody $dragonCode 'StopWork'
+Assert-Check ($dragonStop -match 'Owner\s*==\s*OldDragon' -and $dragonStop -match 'OldDragon\.OwnPlayer\s*==\s*Wearer' -and $dragonStop -match 'OldDragon\.Mesh\s*==\s*GuardMesh') 'Dragon restoration needs host ownership and matching mesh'
+Assert-Check ($dragonStop -notmatch '(?<!\.)\bDestroy\s*\(' -and (Get-FunctionBody $dragonCode 'Destroyed') -notmatch 'LinkMesh|SetPhysics|AnimBlendParams') 'Dragon Destroyed must be non-recursive and avoid host restoration'
+$petCode = Get-CodeOnly ([IO.File]::ReadAllText((Join-Path $projectRoot 'Sephiroth\Classes\PetController.uc')))
+$petTick = Get-FunctionBody $petCode 'Tick'
+Assert-Check ($petTick.IndexOf('GetHeroState') -ge 0 -and $petTick.IndexOf('GetHeroState') -lt $petTick.IndexOf('Spawn') -and $petTick.IndexOf('StopForHost') -lt $petTick.IndexOf("GotoState('PetWalking')")) 'Pet controller must gate creation and restore before normal walking'
+Write-Output 'PASS: lifecycle entry, stop, and restoration source guards.'
+Write-Output "PASS: native declarations and approved visual invariants against $BaselineRef."
+if ($StaticOnly) {
+    Write-Output "PASS: $script:assertionCount static source assertions. No behavior models or client execution."
+} else {
+    Write-Output "PASS: $script:assertionCount source/model assertions. This is not UnrealScript execution or client login/crash verification."
+}

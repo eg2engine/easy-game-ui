@@ -1,5 +1,19 @@
 # 黑金武器光效
 
+## 1.0.0.5 发布验证（2026-10-09）
+
+本次从暂存记录提取 2026-09-29 生命周期与模型名称读取加固，纳入 main 发布范围；跨服诊断等无关改动未提取。现行生命周期要求见下节，金龙对应要求见 [D47](GOLDEN_DRAGON_ORBIT.md#d47金龙增强生命周期保护2026-09-29)。
+
+本次重新执行检查，426 项源码与行为模型断言通过（包括新增策略入库后的基线检查）；两份脚本包完整 UCC 编译为 0 错误、55 个警告。警告数量与历史基线一致，未出现修改文件的编译警告。验证日志保存在本地 `../.weapon-fx-work/builds/release-lifecycle-20261009/`，编译包保存在 `../.weapon-fx-work/current/release-lifecycle-20261009/`，这些目录不随 Git 发布。尚未进行客户端登录、变身、宠物切换和崩溃复现验收；未转换 spg 或部署。
+
+## 生命周期保护（2026-09-29）
+
+`FxLifecyclePolicy.GetHeroState` 先检查角色、控制器、PSI 和控制器所持角色，再以 `bTransformed` 或 `TransToMonsterName` 判断变身。神秘人、技能变身及变身卡期间，黑金 Link 暂停并清除当前效果、装备资格缓存和重试；角色和数据恢复正常后重新读取当前挂载与装备。初始化期间仅等待，不永久停止。挂件销毁时先停止 Link，再销毁其效果；粒子结构异常记录仍保留。
+
+正常形态下的词条门槛、视觉默认参数和资源未改。本轮仅完成源码静态检查与 `Bin/UCC.exe make` 脚本编译；没有启动客户端或验证崩溃是否消失。编译日志和两份 `.u` 位于 `.weapon-fx-work/builds/lifecycle-20260929` 及 `.weapon-fx-work/current/lifecycle-20260929`，未转换 `.spg` 或部署。金龙对应生命周期说明见 [金龙生命周期保护](GOLDEN_DRAGON_ORBIT.md#d47金龙增强生命周期保护2026-09-29)。
+
+后续名称读取加固：骨骼网格使用引擎现有 `Actor.GetMeshName()` 取得短名称；静态网格分别读取 `StaticMesh.Name`，保留两类网格的冲突校验和拳套实际男女变体优先规则。这样避开将整个模型对象转成包含 Outer 路径的字符串。该调用仍依赖原生模型指针有效，不能单凭静态检查认定访问违例已消失。验收日志与脚本包位于 `.weapon-fx-work/builds/getmeshname-20260929` 和 `.weapon-fx-work/current/getmeshname-20260929`。
+
 ## 正式版本
 
 以V40视觉为基础，红法采用整杖头红金火焰包裹和常驻外围旋流，其余武器保持原视觉。采用V41显示条件：同一黑金武器至少5个不同名称的属性词条 `AffixValue >= 17` 才创建自定义光效。适用 MurcielSwordB、AcordGauntletB（男女模型）、AblazeStaffB、GlaciesStickB、ApliteBowB。

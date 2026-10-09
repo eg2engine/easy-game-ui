@@ -1,3 +1,4 @@
+// 维护红法粒子动画，仅在所属武器 Link 允许时更新。
 class Designed_AblazeStaffB_Particles extends Emitter;
 
 // Continuous red-gold fire wraps the entire head; the charged core stays separate.
@@ -105,6 +106,7 @@ simulated event PostBeginPlay()
     SyncWrapFlow(0);
 }
 
+// 每帧先检查所属对象的停止或生命周期状态，失效时不继续访问效果资源。
 simulated event Tick(float DeltaTime)
 {
     local vector TailLocal, TailWorld;
@@ -114,6 +116,12 @@ simulated event Tick(float DeltaTime)
     local vector P, Tip, TipVelocity;
     local float Speed, CoreGlow, HaloGlow, SurfaceGlow;
     local int I;
+    local DesignedWeaponFxBase FxBase;
+    if (bDeleteMe)
+        return;
+    FxBase = DesignedWeaponFxBase(Owner);
+    if (FxBase == None || !FxBase.CanUpdateDetail())
+        return;
     SyncGlowCenters();
     TravelTime = (63.0 - Emitters[0].StartLocationRange.Z.Min) / Emitters[0].StartVelocityRange.Z.Min;
     CycleTime = (CycleTime + DeltaTime) % 4.6;

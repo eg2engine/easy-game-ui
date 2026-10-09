@@ -1,3 +1,4 @@
+// 管理金龙眼部覆盖、眼光和电弧，统一停止并清理子效果。
 class GoldenDragonEyes extends Actor;
 #exec STATICMESH IMPORT NAME=GoldenDragonEyeRim FILE=Models\GoldenDragonEyeRim.lwo
 #exec STATICMESH IMPORT NAME=GoldenDragonEyeAmber FILE=Models\GoldenDragonEyeAmber.lwo
@@ -12,6 +13,7 @@ var ColorModifier RimMaterial;
 var GoldenDragonEyeGlow Glows[2];
 var GoldenDragonEyeArc Arcs[2];
 var vector GlowOffsets[2], ArcStarts[2], ArcEnds[2];
+var bool bStopping;
 
 simulated event PostBeginPlay()
 {
@@ -34,23 +36,55 @@ simulated function vector OnHead(coords Frame, vector Offset, float Scale)
         +Normal(Frame.YAxis)*Offset.Y+Normal(Frame.ZAxis)*Offset.Z);
 }
 
+// 先清空眼光和电弧引用，再销毁旧效果。
 simulated function ClearSpecial()
 {
     local int I;
+    local Actor OldEffect;
     for (I=0; I<2; I++)
     {
-        if (Glows[I]!=None) Glows[I].Destroy();
-        if (Arcs[I]!=None) Arcs[I].Destroy();
-        Glows[I]=None; Arcs[I]=None;
+        OldEffect=Glows[I];
+        Glows[I]=None;
+        if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
+        OldEffect=Arcs[I];
+        Arcs[I]=None;
+        if (OldEffect!=None && !OldEffect.bDeleteMe) OldEffect.Destroy();
     }
 }
 
+// 幂等地永久停止更新并清理所属资源；不在此函数内递归销毁自身。
+simulated function StopWork()
+{
+    local int I;
+    local GoldenDragonEyeLayer OldLayer;
+    if (bStopping)
+        return;
+    bStopping=True;
+    Disable('Tick');
+    bHidden=True;
+    for (I=0; I<4; I++)
+    {
+        OldLayer=Layers[I];
+        Layers[I]=None;
+        if (OldLayer!=None)
+        {
+            OldLayer.StopWork();
+            if (!OldLayer.bDeleteMe) OldLayer.Destroy();
+        }
+    }
+    ClearSpecial();
+    RimMaterial=None;
+}
+
+// 仅在眼部与宿主存活时同步骨骼；装备资格控制附加眼光与电弧。
 simulated function SyncEyes(Guardian Source, bool Eligible)
 {
     local coords Head;
     local int I;
     local float Scale, Pulse, ArcPhase;
     local vector P,A,B;
+    if (bStopping || Source==None || Source.bDeleteMe)
+        return;
     Head=Source.GetBoneCoords('Bone017_060');
     if (VSize(Head.XAxis)<0.5 || VSize(Head.YAxis)<0.5 || VSize(Head.ZAxis)<0.5)
     { bHidden=True; for (I=0; I<4; I++) if (Layers[I]!=None) Layers[I].bHidden=True; ClearSpecial(); return; }
@@ -87,16 +121,18 @@ simulated function SyncEyes(Guardian Source, bool Eligible)
     }
 }
 
+// 每帧先检查所属对象的停止或生命周期状态，失效时不继续访问效果资源。
 simulated event Tick(float DT)
 {
+    if (bStopping)
+        return;
     if (Owner==None || Owner.bDeleteMe) Destroy();
 }
 
+// 销毁时先停止所属增强或效果，再执行父类清理。
 simulated event Destroyed()
 {
-    local int I;
-    for (I=0; I<4; I++) if (Layers[I]!=None) Layers[I].Destroy();
-    ClearSpecial();
+    StopWork();
     Super.Destroyed();
 }
 

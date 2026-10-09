@@ -1,3 +1,4 @@
+// 管理武器粒子创建、结构检查和变换同步，更新前检查所属 Link 生命周期。
 class DesignedWeaponFxBase extends SepEffect;
 
 // Keep the original weapon mesh and native attachment conventions.
@@ -6,6 +7,14 @@ var Emitter DetailFx;
 var class<Emitter> DetailClass;
 var Actor DetailAnchor;
 var bool bDetailStructureInvalid;
+
+// 仅在 Link 和所属角色均可更新时返回真，供粒子更新前检查。
+simulated function bool CanUpdateDetail()
+{
+    local BlackGoldWeaponFxLink Link;
+    Link = BlackGoldWeaponFxLink(Owner);
+    return Link != None && !Link.bDeleteMe && Link.CanUpdateDetail();
+}
 
 simulated function TraceDetailStage(name Stage, int Value)
 {
@@ -34,9 +43,12 @@ simulated function ClearDetailFx()
         OldDetailFx.Destroy();
 }
 
+// 先检查所属角色生命周期，再验证粒子引用及蓝法结构。
 simulated function bool CheckDetailFx()
 {
     local Designed_GlaciesStickB_Particles BlueDetail;
+    if (!CanUpdateDetail())
+        return False;
     if (DetailFx == None)
         return False;
     if (DetailFx.bDeleteMe)
@@ -57,10 +69,11 @@ simulated function bool CheckDetailFx()
 
 // The attachment's displayed transform can differ from this actor's Location.
 // Anchor particle simulation to the actual weapon actor.
+// 生命周期允许时同步武器世界变换，不在停止期间访问粒子。
 simulated function SyncDetailTransform()
 {
     local Actor Anchor;
-    if (bDeleteMe || !CheckDetailFx())
+    if (bDeleteMe || !CanUpdateDetail() || !CheckDetailFx())
         return;
     Anchor = DetailAnchor;
     if (Anchor == None)
@@ -77,9 +90,10 @@ simulated function SyncDetailTransform()
 }
 
 // A caller controls retry frequency; Tick never creates replacement particles.
+// 生命周期允许时尝试创建粒子；返回真表示本次粒子可用，重试由 Link 调度。
 simulated function bool EnsureDetailFx()
 {
-    if (bDeleteMe || bDetailStructureInvalid || Level.NetMode == NM_DedicatedServer
+    if (bDeleteMe || !CanUpdateDetail() || bDetailStructureInvalid || Level.NetMode == NM_DedicatedServer
         || DetailClass == None)
         return False;
     if (CheckDetailFx())
@@ -109,8 +123,11 @@ simulated event PostBeginPlay()
     EnsureDetailFx();
 }
 
+// 每帧先检查所属对象的停止或生命周期状态，失效时不继续访问效果资源。
 simulated event Tick(float DeltaTime)
 {
+    if (!CanUpdateDetail())
+        return;
     Super.Tick(DeltaTime);
     SyncDetailTransform();
 }

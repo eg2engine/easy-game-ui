@@ -1,3 +1,4 @@
+// 驱动金龙增强动画与轨道，仅向仍由本 Link 控制的有效宿主恢复原状态。
 class GoldenDragonGuardianLink extends Actor config(GoldenDragonOrbit);
 
 
@@ -65,40 +66,115 @@ var EPhysics SavedPhysics;
 var int UpdateCount, AnimStartCount;
 
 var float LastUpdateTime;
+var bool bStopping;
 
 
 
+// 使用引擎短模型名称识别金龙，避免完整模型对象字符串转换。
 static function bool IsDragon(Guardian P)
 
 {
 
     local string Key;
 
-    local int Dot;
-
-    if (P == None || P.bDeleteMe || P.Mesh == None)
+    if (P == None || P.bDeleteMe)
 
         return False;
 
-    Key = Caps(string(P.Mesh));
-
-    Dot = InStr(Key, ".");
-
-    while (Dot >= 0)
-
-    {
-
-        Key = Mid(Key, Dot + 1);
-
-        Dot = InStr(Key, ".");
-
-    }
+    Key = Caps(P.GetMeshName());
 
     return Key == "GOLDENDRAGON" || Key == "GOLDENDRAGONGUARD";
 
 }
 
 
+
+// 先收集宿主的辅助对象再停止和销毁，避免遍历期间修改子对象集合；恢复由 bRestoreHost 控制。
+static function StopForHost(Guardian Host, bool bRestoreHost)
+{
+    local GoldenDragonGuardianLink Link;
+    local GoldenDragonBodyFxLink Fx;
+    local array<GoldenDragonGuardianLink> Links;
+    local array<GoldenDragonBodyFxLink> Effects;
+    local int I;
+
+    if (Host == None)
+        return;
+    foreach Host.ChildActors(class'GoldenDragonGuardianLink', Link)
+    {
+        Links.Length = Links.Length + 1;
+        Links[Links.Length - 1] = Link;
+    }
+    foreach Host.ChildActors(class'GoldenDragonBodyFxLink', Fx)
+    {
+        Effects.Length = Effects.Length + 1;
+        Effects[Effects.Length - 1] = Fx;
+    }
+    for (I = 0; I < Links.Length; I++)
+    {
+        Link = Links[I];
+        if (Link != None)
+        {
+            Link.StopWork(bRestoreHost);
+            if (!Link.bDeleteMe)
+                Link.Destroy();
+        }
+    }
+    for (I = 0; I < Effects.Length; I++)
+    {
+        Fx = Effects[I];
+        if (Fx != None)
+        {
+            Fx.StopWork();
+            if (!Fx.bDeleteMe)
+                Fx.Destroy();
+        }
+    }
+}
+
+// 永久停止更新并清理子效果；仅当请求恢复且宿主归属、网格仍匹配时恢复原动画、缩放和物理状态。
+simulated function StopWork(bool bRestoreHost)
+{
+    local Guardian OldDragon;
+    local GoldenDragonBodyFxLink OldBodyFx;
+    local bool bCanRestore;
+
+    if (bStopping)
+        return;
+    bStopping = True;
+    Disable('Tick');
+    OldDragon = Dragon;
+    OldBodyFx = BodyFx;
+    BodyFx = None;
+    // 只有仍归属原主人且当前网格仍受本 Link 控制的存活宿主才能恢复，避免覆盖新模型或销毁中的状态。
+    bCanRestore = bRestoreHost && bInitialized && bGuardAssetReady
+        && OldDragon != None && !OldDragon.bDeleteMe && Owner == OldDragon
+        && Wearer != None && !Wearer.bDeleteMe && OldDragon.OwnPlayer == Wearer
+        && GuardMesh != None && SavedMesh != None && OldDragon.Mesh == GuardMesh;
+    Dragon = None;
+    Wearer = None;
+    if (OldBodyFx != None)
+    {
+        OldBodyFx.StopWork();
+        if (!OldBodyFx.bDeleteMe)
+            OldBodyFx.Destroy();
+    }
+    if (bCanRestore)
+    {
+        if (bPoseLayersReady)
+        {
+            OldDragon.AnimBlendParams(1, 0);
+            OldDragon.AnimStopLooping(1);
+        }
+        OldDragon.LinkMesh(SavedMesh);
+        OldDragon.SetDrawScale(SavedDrawScale);
+        OldDragon.SetDrawScale3D(SavedDrawScale3D);
+        OldDragon.SetPhysics(SavedPhysics);
+    }
+    SavedMesh = None;
+    GuardMesh = None;
+    bPoseLayersReady = False;
+}
 
 // Normal pet spacing with tangent-facing orbit; full body clearance needs visual testing.
 
@@ -160,6 +236,7 @@ simulated function bool UpdatePoseBlend(float DT)
     return True;
 }
 
+// 由宠物控制器驱动动画和轨道；先校验主人状态，失效时停止并按宿主有效性清理。
 simulated function UpdateDragon(float DT)
 
 {
@@ -177,17 +254,35 @@ simulated function UpdateDragon(float DT)
 
 
 
+    if (bStopping)
+        return;
     UpdateCount++;
 
     LastUpdateTime = Level.TimeSeconds;
 
     Dragon = Guardian(Owner);
 
-    if (!IsDragon(Dragon)) { Destroy(); return; }
+    if (Dragon == None || Dragon.bDeleteMe)
+    {
+        StopWork(False);
+        Destroy();
+        return;
+    }
 
     Wearer = Hero(Dragon.OwnPlayer);
 
-    if (Wearer == None || Wearer.bDeleteMe) return;
+    if (class'FxLifecyclePolicy'.static.GetHeroState(Wearer) != 'Ready')
+    {
+        StopWork(True);
+        Destroy();
+        return;
+    }
+    if (!IsDragon(Dragon))
+    {
+        StopWork(False);
+        Destroy();
+        return;
+    }
 
     DT = FClamp(DT, 0.001, 0.1);
 
@@ -556,56 +651,46 @@ simulated function UpdateDragon(float DT)
 
 
 
+// 每帧先检查所属对象的停止或生命周期状态，失效时不继续访问效果资源。
 simulated event Tick(float DT)
 
 {
 
-    // Lifetime only: PetController.Tick owns motion updates.
+    local Guardian Host;
 
-    if (!IsDragon(Guardian(Owner))) { Destroy(); return; }
+    if (bStopping)
+        return;
+    Host = Guardian(Owner);
 
-    if (Guardian(Owner).OwnPlayer == None || Guardian(Owner).OwnPlayer.bDeleteMe) Destroy();
+    if (Host == None || Host.bDeleteMe)
+    {
+        StopWork(False);
+        Destroy();
+        return;
+    }
+
+    if (class'FxLifecyclePolicy'.static.GetHeroState(Hero(Host.OwnPlayer)) != 'Ready')
+    {
+        StopWork(True);
+        Destroy();
+        return;
+    }
+    if (!IsDragon(Host))
+    {
+        StopWork(False);
+        Destroy();
+    }
 
 }
 
 
 
+// 销毁时先停止所属增强或效果，再执行父类清理。
 simulated event Destroyed()
-
 {
-
-    if (BodyFx != None) BodyFx.Destroy();
-    BodyFx=None;
-    if (Dragon != None && !Dragon.bDeleteMe && bPoseLayersReady)
-    {
-        Dragon.AnimBlendParams(1, 0);
-        Dragon.AnimStopLooping(1);
-    }
-    if (bInitialized && Dragon != None && !Dragon.bDeleteMe)
-
-    {
-
-        Dragon.SetPhysics(SavedPhysics);
-
-        if (bGuardAssetReady && Dragon.Mesh == GuardMesh)
-
-        {
-
-            Dragon.LinkMesh(SavedMesh);
-
-            Dragon.SetDrawScale(SavedDrawScale);
-
-            Dragon.SetDrawScale3D(SavedDrawScale3D);
-
-        }
-
-    }
-
+    StopWork(False);
     Super.Destroyed();
-
 }
-
-
 
 defaultproperties
 

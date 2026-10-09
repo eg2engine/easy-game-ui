@@ -1,3 +1,4 @@
+// 维护蓝法粒子动画及结构保护，仅在所属武器 Link 允许时更新。
 class Designed_GlaciesStickB_Particles extends Emitter;
 
 // V16: silver-blue shaft, crystal crown, orbiting shards and slow frost rings.
@@ -38,6 +39,7 @@ simulated function bool ValidateStructure()
     return True;
 }
 
+// 每帧先检查所属对象的停止或生命周期状态，失效时不继续访问效果资源。
 simulated event Tick(float DeltaTime)
 {
     local vector TailLocal, TailWorld;
@@ -48,10 +50,12 @@ simulated event Tick(float DeltaTime)
     local DesignedWeaponFxBase FxBase;
     if (bDeleteMe)
         return;
+    FxBase = DesignedWeaponFxBase(Owner);
+    if (FxBase == None || !FxBase.CanUpdateDetail())
+        return;
     if (!bFirstTickTraced)
     {
         bFirstTickTraced = True;
-        FxBase = DesignedWeaponFxBase(Owner);
         if (FxBase != None && !FxBase.bDeleteMe)
             FxBase.TraceDetailStage('ParticleFirstTick', 0);
     }
