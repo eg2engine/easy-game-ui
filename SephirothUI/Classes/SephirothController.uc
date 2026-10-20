@@ -1720,14 +1720,17 @@ function bool DisableAutoAttack()
 			bPluginAutoAttack = False;			
 			SephirothPlayer(ViewportOwner.Actor).myHud.AddMessage(1,Localize("Setting","PluginAutoAttackDisabledForMoving","Sephiroth"),class'Canvas'.Static.MakeColor(255,255,0));
 			SephirothPlayer(ViewportOwner.Actor).myHud.AddMessage(1,Localize("Setting","PluginAutoAttackDisabled","Sephiroth"),class'Canvas'.Static.MakeColor(255,255,0));
+			return True;
 		}
 		else if(bPluginAutoCast)
 		{
 			bPluginAutoCast = False;
 			SephirothPlayer(ViewportOwner.Actor).myHud.AddMessage(1,Localize("Setting","PluginAutoAttackDisabledForMoving","Sephiroth"),class'Canvas'.Static.MakeColor(255,255,0));
 			SephirothPlayer(ViewportOwner.Actor).myHud.AddMessage(1,Localize("Setting","PluginAutoCastDisabled","Sephiroth"),class'Canvas'.Static.MakeColor(255,255,0));
+			return True;
 		}
 	}
+	return False;
 }
 
 auto state Standing

@@ -11,6 +11,7 @@ import argparse, json, re, shutil, struct, subprocess
 from unreal_package import Package, Reader, compact
 from unreal_source import read_source as text, mask, blocks, method_map
 import unreal_properties as property_tags
+from audit_compile_warnings import audit
 
 repo=Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser(description=__doc__)
@@ -121,4 +122,7 @@ if p.exists():p.unlink()
 r=subprocess.run([str(b/'UCC.exe'),'make','ini=sync.ini','-unattended'],cwd=b,capture_output=True,timeout=180)
 log=r.stdout.decode('gbk',errors='replace')+r.stderr.decode('gbk',errors='replace');(stage/'compile.txt').write_text(log,'utf8');print(log[-1000:]);print('exit',r.returncode,'methods',count)
 assert r.returncode==0 and 'Success - 0 error(s)' in log, 'Compiler failed; inspect compile.txt and Bin/UCC.log'
-(stage/'result.json').write_text(json.dumps({'typecheck':'PASS','donor_methods':count,'warnings':int(re.search(r'Success - 0 error\(s\), (\d+) warning',log)[1]),'runtime_integration_tested':False},indent=2),'utf8')
+warning_report=audit(log,repo,b,stage)
+(stage/'warnings.json').write_text(json.dumps(warning_report,ensure_ascii=False,indent=2)+'\n','utf8')
+assert warning_report['requires_review']==0, 'Warnings require functional review; inspect warnings.json'
+(stage/'result.json').write_text(json.dumps({'typecheck':'PASS','donor_methods':count,'warnings':warning_report['total'],'warning_categories':warning_report['categories'],'warning_review':'PASS','runtime_integration_tested':False},indent=2),'utf8')

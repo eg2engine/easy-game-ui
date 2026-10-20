@@ -40,6 +40,7 @@ V135 删除的新增运行日志没有带回：不包含 `FlightVisualLog` 模�
 python tests/Verify-ClientSync.py
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/Verify-WeaponFxGate.ps1
 python -m unittest discover -s tests -p test_client_patches.py
+python -m unittest discover -s tests -p test_compile_warnings.py
 git diff --check
 ```
 
@@ -61,11 +62,11 @@ python tools/validate_client_sources.py `
 
 ## 本次验证结果
 
-- 97 个累计源码文件、2104 个方法的重复定义、括号、原生前缀和输出入口静态检查通过。
+- 98 个源码文件、2141 个方法的重复定义、括号、原生前缀和输出入口静态检查通过。
 - 武器／金龙 413 项源码和边界模型断言通过；视觉默认属性保持。
 - 远端运动辅助包完整编译：0 错误、0 警告。
-- 隔离校验包检查 478 个方法／状态体：0 错误、166 警告。警告主要为原有数字结尾类名、未使用局部变量及旧编辑器提示；完整日志留在忽略目录。
-- 6 项补丁输入／哈希／重叠／边界测试通过。
+- 隔离校验包检查 480 个方法／状态体：0 错误、164 条已审核提示（96 条数字结尾类名、68 条未使用局部变量）。原先 166 条中的返回值缺失、局部变量遮蔽已修复；逐条记录见 [COMPILER_WARNINGS.md](COMPILER_WARNINGS.md)。完整日志留在忽略目录。
+- 6 项补丁输入／哈希／重叠／边界测试及 6 项警告检查器测试通过。
 - 6 个 DLL 和 `PetPkg.spa` 从原版输入复现，逐文件 SHA256 与 V135 成品一致。
 - 对照原版列出 182 个已改变的既有函数，均有对应源码文件；没有用旧导出文本替代缺失的函数体。
 

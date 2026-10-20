@@ -439,6 +439,10 @@
     {
       "path": "RemoteMotionSys/Classes/FollowPolicy.uc",
       "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/CCustomBrowser.uc",
+      "allowed_log_signatures": []
     }
   ],
   "native_recipes": [
