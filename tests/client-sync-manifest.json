@@ -1,0 +1,453 @@
+{
+  "upstream_baseline": "8c662327c204d95435d11b75e17700b03329f20e",
+  "cumulative_release": "V135",
+  "sources": [
+    {
+      "path": "ActiveFx/Classes/Active_BlastBlade.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ActiveFx/Classes/Active_BlastFist.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ActiveFx/Classes/HailStorm_Explosion.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ActiveFx/Classes/Nightmare_Casting.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "BowAttackRuntime/Classes/DefinitionStore.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "BowAttackRuntime/Classes/RoundSkill.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "BowAttackRuntime/Classes/RoundStore.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "CmdMelee/Classes/CommandBowPlayer.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "CmdMelee/Classes/CommandMeleePlayer.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/AbsDodge.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/CastingHand.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/DAMUP.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/FastScroll.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/HeadFire.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/LeftHandBlue.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/LeftHandBlueFx.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/LeftHandGreen.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/LeftHandGreenFx.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/LeftHandRed.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/LeftHandRedFx.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/RingAttach.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/RiotFx.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/ShieldReflectionFx.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/SpeedScroll.uc",
+      "allowed_log_signatures": [
+        "\"Xelloss : Owner is not HERO\""
+      ]
+    },
+    {
+      "path": "EnchantFx/Classes/Spirit_Alseide.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/Spirit_Naiad.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/Spirit_Nereid.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/Spirit_Oread.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "EnchantFx/Classes/ZenoFly.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Engine/Classes/CheatManager.uc",
+      "allowed_log_signatures": [
+        "\"Fabricate \"",
+        "\"NOW!\"",
+        "\"Num dynamic actors: \"",
+        "\"TestLabel is \"",
+        "log(i@A);"
+      ],
+      "native_prefix_sha256": "a6de9e76fa83ee8c7c99684b96992da64deddc02da515ab22647258de06d2aa0"
+    },
+    {
+      "path": "Engine/Classes/PlayerController.uc",
+      "allowed_log_signatures": [
+        "\".ProgressCommand Cmd '\"",
+        "\"AddCheats\"",
+        "\"AdminClass is None\"",
+        "\"ChatBan Role:\"",
+        "\"ChatBan not successful - could not find player with ID:\"",
+        "\"Join \"",
+        "\"PlayerController::ClientSetHUD(): Could not spawn a HUD of class \"",
+        "\"Possible speed hack by \"",
+        "\"PreClientTravel\"",
+        "\"ServerChatRestriction PRI:\"",
+        "\"ServerChatRestriction PlayerID:\"",
+        "\"ServerChatRestriction checking GRI.PRIArray[\"",
+        "\"Weapon stats requested by \"",
+        "\"app Time----------->class\"",
+        "\"app Time----------->string\"",
+        "\"no longer speaking on \"",
+        "\"speaking on\"",
+        "log(RecognizedString);"
+      ],
+      "native_prefix_sha256": "1c30e77098ff8ea02cef6bb5e5a7f68aca3708314276d74c417c8cb7730f2372",
+      "native_declarations_sha256": "7e486fc7feaa3ad6bf805882f31501d9822df4b3d649efd999df67aa6fdd7aee"
+    },
+    {
+      "path": "FreeviewPrefs/Classes/FreeviewSettings.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/FlightPoseWorker.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/Lifetime.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/OwnedBlend.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/OwnedColor.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/OwnedCombiner.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/OwnedConstant.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/OwnedEnchant.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/OwnedEnchantBox.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/OwnedPattern.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/OwnedQuickInfo.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/OwnedScaler.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "ObjectStore/Classes/UILifetime.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "RemoteMotionSys/Classes/MoveQueue.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "RemoteMotionSys/Classes/QueueIndex.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SceneRegistry/Classes/LiveRegistry.uc",
+      "allowed_log_signatures": [],
+      "native_declarations_sha256": "c5636e0094bd313d074416cde3312385d64b3a68e80ea73d83e3fdfd719e6d54"
+    },
+    {
+      "path": "Sephiroth/Classes/Attachment.uc",
+      "allowed_log_signatures": [],
+      "native_prefix_sha256": "aed5223178124c6324e32bba38f6eff874e44f54a83770f34fc98997aea02739",
+      "native_declarations_sha256": "80ddbbbe5b5a8c4e447074a9c8773b25424d92d067e0778abb078dc15ee1e815"
+    },
+    {
+      "path": "Sephiroth/Classes/BlackGoldWeaponFxLink.uc",
+      "allowed_log_signatures": [
+        "\"[BGFX] stage=\"",
+        "\"[BGFX] status=\""
+      ]
+    },
+    {
+      "path": "Sephiroth/Classes/Character.uc",
+      "allowed_log_signatures": [],
+      "native_prefix_sha256": "1717b42f4b06e19773ed4d708fd1546f6fda409c61bce95aeb08ea8e25293fed",
+      "native_declarations_sha256": "9cfe72c7c91b8e2d6c82ddeaa8d61700cdbc72df094b8888e9bd95edc2551102"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientCheat.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "allowed_log_signatures": [],
+      "native_prefix_sha256": "078f8c24352f473924b9907b28b981e10df03db347c8fade41768e06a131b1a6",
+      "native_declarations_sha256": "8c419ce26c415ff960afd588ab0f1bb717f36695f40e8355ce040ed0b1c45f61"
+    },
+    {
+      "path": "Sephiroth/Classes/Creature.uc",
+      "allowed_log_signatures": [],
+      "native_prefix_sha256": "8a11893cb7ea0570684f4ecde82b5d9a4e59da7265586bb4a9cc33afc591e9be",
+      "native_declarations_sha256": "831451dfcfd82fc9f9ce3629609943f2c761021f664f296d8eceb63ac7dd84f1"
+    },
+    {
+      "path": "Sephiroth/Classes/DesignedWeaponFxBase.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/Designed_AblazeStaffB_Particles.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/Designed_AcordGauntletHF_Particles.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/Designed_AcordGauntletHM_Particles.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/Designed_ApliteBow_HJ_Particles.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/Designed_GlaciesStickB_Particles.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/EffectProjectile.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/EffectProjector.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/EnchantBox.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/GoldenDragonBodyFxLink.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/GoldenDragonEyeLayer.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/GoldenDragonEyes.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/GoldenDragonGuardianLink.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/GoldenDragonPearl.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/Hero.uc",
+      "allowed_log_signatures": [],
+      "native_prefix_sha256": "98ee3609eb833b6dc0865c6e7ced127bd27720a517837f30860653a92d7b64a2",
+      "native_declarations_sha256": "69809a3237e6775ae72050dfa77819aeda3a1bab6b0e3a81b235290e119c932d"
+    },
+    {
+      "path": "Sephiroth/Classes/MagicSplash.uc",
+      "allowed_log_signatures": [],
+      "native_prefix_sha256": "424e3f33de8cb1eef0d6ed856f25aff6ca972f959ffc14b55d4c29e146684802"
+    },
+    {
+      "path": "Sephiroth/Classes/ModelCache.uc",
+      "allowed_log_signatures": [],
+      "native_prefix_sha256": "e0eccb042d6bf9b2691c578cf0b099580c3ee807e183618c7f79d255aa7ad88a",
+      "native_declarations_sha256": "f62015fa4a93e33655cf05b960acf66226e1b74c80eb94bde361eb2659668b17"
+    },
+    {
+      "path": "Sephiroth/Classes/Monster.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "Sephiroth/Classes/Pet.uc",
+      "allowed_log_signatures": [],
+      "native_prefix_sha256": "6aec958e1c5b7b477ae18e9b793124411fdfc6a0ebd02b2c2e3d9887b403efb8",
+      "native_declarations_sha256": "c32f3040c560bd32f40f7d7f5b0da1f6f2700a3e7e99b1f42784226d74327d89"
+    },
+    {
+      "path": "Sephiroth/Classes/ServerController.uc",
+      "allowed_log_signatures": [],
+      "native_prefix_sha256": "a1e8dffc085d890a543c211df08eb0a773367d426168a093773178a40c81b24b"
+    },
+    {
+      "path": "SephirothUI/Classes/CLobby.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/CLobbyController.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/CMiniMap.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/COption.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/CPetInfo.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/CStashLobby.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/NephilimPlayer.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/QuickKeyButton.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/QuickKeyInfo.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/ScreenEffect.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/SephirothController.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/SephirothInterface.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SephirothUI/Classes/SephirothPlayer.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SpecialFx/Classes/BASIC_Levelup.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SpecialFx/Classes/BASIC_MissonClear.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "SpecialFx/Classes/ManaBarrierBlue.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "UIVisibility/Classes/BuffIconVisibility.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "UIVisibility/Classes/DisplaySettings.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "UIVisibility/Classes/PageGameVisibility.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "UIVisibility/Classes/PageScreenVisibility.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "UIVisibility/Classes/VisibilitySettings.uc",
+      "allowed_log_signatures": []
+    },
+    {
+      "path": "RemoteMotionSys/Classes/FollowPolicy.uc",
+      "allowed_log_signatures": []
+    }
+  ],
+  "native_recipes": [
+    "native/patches/ALAudio.dll.json",
+    "native/patches/Core.dll.json",
+    "native/patches/D3D9Drv.dll.json",
+    "native/patches/Engine.dll.json",
+    "native/patches/PetPkg.spa.json",
+    "native/patches/Sephiroth.dll.json",
+    "native/patches/WinDrv.dll.json"
+  ]
+}

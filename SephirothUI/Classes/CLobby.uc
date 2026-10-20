@@ -59,7 +59,7 @@ var float m_LastDeleteTime;	// 控制删除角色的冷却时间
 
 // 初始化大厅界面组件、背景以及按钮事件
 function OnInit()
-{
+{ class'BowAttackRuntime.DefinitionStore'.static.ClearAll();
 	// 停止过场与角色动画通知，并播放选角音乐
 	PlayerOwner.ConsoleCommand("CINEMATICS 0");
 	ConsoleCommand("NOTIFYANIMSTEP 0");

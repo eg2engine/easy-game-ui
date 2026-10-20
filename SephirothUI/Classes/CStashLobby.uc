@@ -486,7 +486,12 @@ function OnPreRender(Canvas C)
 	{
 		VisibleComponent(Components[3], True);
 		VisibleComponent(Components[4], False);
-		C.DrawTile(TextureResources[0].Resource, Components[1].XL, Components[1].YL, 0, 0, Components[1].XL, Components[1].YL);
+		// Preserve the original header and footer. Use one uninterrupted center panel.
+        C.DrawTile(TextureResources[0].Resource, Components[1].XL, 55, 0, 0, Components[1].XL, 55);
+        C.SetPos(Components[1].X, Components[1].Y + 55);
+        C.DrawTile(TextureResources[0].Resource, Components[1].XL, Components[1].YL - 105, 0, 55, Components[1].XL, 123);
+        C.SetPos(Components[1].X, Components[1].Y + Components[1].YL - 50);
+        C.DrawTile(TextureResources[0].Resource, Components[1].XL, 50, 0, 349, Components[1].XL, 50);
 	}
 }
 

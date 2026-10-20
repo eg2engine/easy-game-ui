@@ -148,7 +148,7 @@ event Destroyed()
 {
 	local EffectProjectile P;
 
-	Super.Destroyed();
+	Super(Pawn).Destroyed();
 
 	if ( IsA('Hero') || IsA('Monster') || IsA('GuardStone') || IsA('MatchStone') ) 
 	{
@@ -176,6 +176,7 @@ event Destroyed()
 	if( HaloEffect != None )
 		HaloEffect.Destroy();
 	HaloEffect = None;
+    class'ObjectStore.Lifetime'.static.CleanupCharacter(Self);
 }
 
 function BrightenCharacter()
@@ -322,6 +323,32 @@ function CHAR_CheckCreatureWalkAnim()
 
 event CHAR_PlayerWalkingAnim()
 {
+    local name Sequence;
+    local float Frame, Rate;
+    if (Controller != None && Controller.IsInState('CommandMelee'))
+        return;
+
+    if ( PrePivot.Z == Default.PrePivot.Z + 200 && Controller != None
+        && (Controller.IsInState('Navigating') || Controller.IsInState('Approaching')
+        || Controller.IsInState('Attacking') || Controller.IsInState('MeleeAttacking')
+        || Controller.IsInState('RangeAttacking') || Controller.IsInState('SecondSkillAttacking')
+        || Controller.IsInState('Picking') || Controller.IsInState('Talking') || Controller.IsInState('Tracing')) )
+    {
+        // Weapon preparation needs the original idle tween and its real AnimEnd.
+        if ( Controller.IsInState('Attacking') || Controller.IsInState('MeleeAttacking')
+            || Controller.IsInState('RangeAttacking') || Controller.IsInState('SecondSkillAttacking') )
+        {
+            GetAnimParams(0,Sequence,Frame,Rate);
+            if ( Sequence != BasicAnim[0] && Sequence != BasicAnim[1]
+                && Sequence != BasicAnim[2] && Sequence != BasicAnim[3]
+                && Sequence != BasicAnim[4] && Sequence != 'Fly'
+                && Sequence != 'Flying' && Sequence != 'FlyIdle' && Sequence != 'FlyForward' )
+                return;
+        }
+        else
+            return;
+    }
+
 	if ( !bIsDead && !bJustDamaged )
 	{
 		if ( Physics == PHYS_Falling )
@@ -373,6 +400,67 @@ event CHAR_PlayerWalkingAnim()
 
 event CHAR_CheckWalkAnim(vector OldAccel,bool bIsTurning,bool bTurningLeft)
 {
+    local name Sequence;
+    local float Frame, Rate;
+    local ClientController Remote;
+    local name Wanted;
+    Remote=ClientController(Controller);
+    if (Remote!=None && Remote.IsRemotePlayerPawn()
+        && PrePivot.Z!=Default.PrePivot.Z+200)
+    {
+        if (bIsDead || Physics==PHYS_Falling || Hero(Remote.Pawn)==None
+            || Remote.IsRemoteHardControlActive() || Remote.IsRemoteSkillDashLockActive()
+            || Remote.IsInState('Knockbacking') || Remote.IsInState('Stunning')
+            || Remote.IsInState('Freezing') || Remote.IsInState('JustDead')) return;
+        GetAnimParams(0,Sequence,Frame,Rate);
+        // A movement pose can be repaired; a cast, attack or pain clip owns itself.
+        if (!Hero(Remote.Pawn).IsBasicAnim(Sequence)) return;
+        if (Acceleration==vect(0,0,0) && Velocity.X*Velocity.X+Velocity.Y*Velocity.Y<1000)
+        {
+            if (Sequence!=BasicAnim[0]) CHAR_TweenToWaiting(0.1);
+            else if (Frame>=0 && Rate==0 && !IsAnimating(0)) CHAR_PlayWaiting();
+        }
+        else
+        {
+            if (bIsWalking) Wanted=BasicAnim[1];
+            else if (Remote.bBackward) Wanted=BasicAnim[4];
+            else Wanted=BasicAnim[2];
+            if (Sequence!=Wanted) CHAR_TweenToRunning(0.1);
+            // TweenAnim changes the sequence with playback rate zero. Its end
+            // must actually start LoopAnim, even if the controller AnimEnd was
+            // routed through a protected attack/advanced-skill state.
+            else if (Frame>=0 && Rate==0 && !IsAnimating(0))
+            {
+                if (bIsWalking) CHAR_PlayWalking();
+                else CHAR_PlayRunning();
+            }
+        }
+        return;
+    }
+    if (Controller != None && Controller.IsInState('CommandMelee'))
+        return;
+
+    if ( PrePivot.Z == Default.PrePivot.Z + 200 && Controller != None
+        && (Controller.IsInState('Navigating') || Controller.IsInState('Approaching')
+        || Controller.IsInState('Attacking') || Controller.IsInState('MeleeAttacking')
+        || Controller.IsInState('RangeAttacking') || Controller.IsInState('SecondSkillAttacking')
+        || Controller.IsInState('Picking') || Controller.IsInState('Talking') || Controller.IsInState('Tracing')) )
+    {
+        // Weapon preparation needs the original idle tween and its real AnimEnd.
+        if ( Controller.IsInState('Attacking') || Controller.IsInState('MeleeAttacking')
+            || Controller.IsInState('RangeAttacking') || Controller.IsInState('SecondSkillAttacking') )
+        {
+            GetAnimParams(0,Sequence,Frame,Rate);
+            if ( Sequence != BasicAnim[0] && Sequence != BasicAnim[1]
+                && Sequence != BasicAnim[2] && Sequence != BasicAnim[3]
+                && Sequence != BasicAnim[4] && Sequence != 'Fly'
+                && Sequence != 'Flying' && Sequence != 'FlyIdle' && Sequence != 'FlyForward' )
+                return;
+        }
+        else
+            return;
+    }
+
 	if ( !bIsDead && !bJustDamaged && Physics != PHYS_Falling ) 
 	{
 		if ( Acceleration == vect(0,0,0) && Velocity.X * Velocity.X + Velocity.Y * Velocity.Y < 1000 ) 
@@ -395,11 +483,31 @@ event CHAR_CheckWalkAnim(vector OldAccel,bool bIsTurning,bool bTurningLeft)
 
 function bool CHAR_AlreadyPlayingWaiting()
 {
+    local name CurrentSequence;
+    local float CurrentFrame,CurrentRate;
+    // Cached AnimSequence may describe the pose before a native action/tween.
+    // Reuse the local waiting transition, but classify the real remote channel.
+    if (ClientController(Controller)!=None && !IsAvatar())
+    {
+        GetAnimParams(0,CurrentSequence,CurrentFrame,CurrentRate);
+        return CurrentSequence==BasicAnim[0];
+    }
+
 	return (AnimSequence == BasicAnim[0]);
 }
 
 function bool CHAR_ShouldTweenToMoving()
 {
+    local name CurrentSequence;
+    local float CurrentFrame,CurrentRate;
+    if (ClientController(Controller)!=None && !IsAvatar())
+    {
+        GetAnimParams(0,CurrentSequence,CurrentFrame,CurrentRate);
+        if (bIsWalking) return CurrentSequence!=BasicAnim[1];
+        if (ClientController(Controller).bBackward) return CurrentSequence!=BasicAnim[4];
+        return CurrentSequence!=BasicAnim[2];
+    }
+
 	if ( bIsWalking ) 
 	{
 		if ( AnimSequence == BasicAnim[1] )
@@ -460,6 +568,10 @@ function CHAR_PlayTurning(bool bTurningLeft)
 
 function CHAR_PlayInAir()
 {
+    // Keep jump physics and jump notification; only protect the active pose.
+    if (Controller != None && Controller.IsInState('CommandMelee'))
+        return;
+
 	if ( AnimSequence != BasicAnim[3] && BasicAnim[3] != '' )
 	{
 		CHAR_TweenAnim(BasicAnim[3], 0.5);
@@ -501,6 +613,26 @@ function CHAR_PlayWaiting()
 
 function CHAR_PlayAnim(name Sequence, optional float Rate, optional float TweenTime, optional int Channel)
 {
+    local ClientController RemoteController;
+    local name CurrentSequence;
+    local float CurrentFrame,CurrentRate;
+    RemoteController=ClientController(Controller);
+    if (Channel==0 && RemoteController!=None && RemoteController.IsRemotePlayerPawn()
+        && (RemoteController.IsInState('MeleeAttacking')
+            || RemoteController.IsInState('RangeAttacking')
+            || RemoteController.IsInState('BowAttacking')
+            || RemoteController.IsInState('SecondSkillAttacking'))
+        && (Hero(RemoteController.Pawn).IsBasicAnim(Sequence) || Sequence=='FlyIdle' || Sequence=='FlyForward'))
+    {
+        GetAnimParams(0,CurrentSequence,CurrentFrame,CurrentRate);
+        // A genuine one-shot (including its incoming tween) owns the pose until
+        // its notify/end callback. Jump/movement physics remain independent.
+        if (!Hero(RemoteController.Pawn).IsBasicAnim(CurrentSequence) && CurrentSequence!='FlyIdle'
+            && CurrentSequence!='FlyForward' && IsAnimating(0)) return;
+    }
+
+
+
 	if ( HasAnim(Sequence) )
 	{
 		AnimSequence = Sequence;
@@ -510,6 +642,35 @@ function CHAR_PlayAnim(name Sequence, optional float Rate, optional float TweenT
 
 function CHAR_LoopAnim(name Sequence, optional float Rate, optional float TweenTime, optional int Channel)
 {
+    local ClientController RemoteController;
+    local name CurrentSequence;
+    local float CurrentFrame,CurrentRate;
+    RemoteController=ClientController(Controller);
+    if (Channel==0 && RemoteController!=None && RemoteController.IsRemotePlayerPawn()
+        && (RemoteController.IsInState('MeleeAttacking')
+            || RemoteController.IsInState('RangeAttacking')
+            || RemoteController.IsInState('BowAttacking')
+            || RemoteController.IsInState('SecondSkillAttacking'))
+        && (Hero(RemoteController.Pawn).IsBasicAnim(Sequence) || Sequence=='FlyIdle' || Sequence=='FlyForward'))
+    {
+        GetAnimParams(0,CurrentSequence,CurrentFrame,CurrentRate);
+        // A genuine one-shot (including its incoming tween) owns the pose until
+        // its notify/end callback. Jump/movement physics remain independent.
+        if (!Hero(RemoteController.Pawn).IsBasicAnim(CurrentSequence) && CurrentSequence!='FlyIdle'
+            && CurrentSequence!='FlyForward' && IsAnimating(0)) return;
+    }
+
+
+
+    // Basic poses requested by movement or passive refresh do not own the
+    // command channel. Genuine control/priority actions leave that state first.
+    if (Channel == 0 && Controller != None && Controller.IsInState('CommandMelee')
+        && (Sequence == BasicAnim[0] || Sequence == BasicAnim[1]
+            || Sequence == BasicAnim[2] || Sequence == BasicAnim[3]
+            || Sequence == BasicAnim[4] || Sequence == 'Idle'
+            || Sequence == 'Walk' || Sequence == 'Run' || Sequence == 'Jump'))
+        return;
+
 	if ( HasAnim(Sequence) )
 	{
 		AnimSequence = Sequence;
@@ -519,6 +680,35 @@ function CHAR_LoopAnim(name Sequence, optional float Rate, optional float TweenT
 
 function CHAR_TweenAnim(name Sequence, float Time, optional int Channel)
 {
+    local ClientController RemoteController;
+    local name CurrentSequence;
+    local float CurrentFrame,CurrentRate;
+    RemoteController=ClientController(Controller);
+    if (Channel==0 && RemoteController!=None && RemoteController.IsRemotePlayerPawn()
+        && (RemoteController.IsInState('MeleeAttacking')
+            || RemoteController.IsInState('RangeAttacking')
+            || RemoteController.IsInState('BowAttacking')
+            || RemoteController.IsInState('SecondSkillAttacking'))
+        && (Hero(RemoteController.Pawn).IsBasicAnim(Sequence) || Sequence=='FlyIdle' || Sequence=='FlyForward'))
+    {
+        GetAnimParams(0,CurrentSequence,CurrentFrame,CurrentRate);
+        // A genuine one-shot (including its incoming tween) owns the pose until
+        // its notify/end callback. Jump/movement physics remain independent.
+        if (!Hero(RemoteController.Pawn).IsBasicAnim(CurrentSequence) && CurrentSequence!='FlyIdle'
+            && CurrentSequence!='FlyForward' && IsAnimating(0)) return;
+    }
+
+
+
+    // Basic poses requested by movement or passive refresh do not own the
+    // command channel. Genuine control/priority actions leave that state first.
+    if (Channel == 0 && Controller != None && Controller.IsInState('CommandMelee')
+        && (Sequence == BasicAnim[0] || Sequence == BasicAnim[1]
+            || Sequence == BasicAnim[2] || Sequence == BasicAnim[3]
+            || Sequence == BasicAnim[4] || Sequence == 'Idle'
+            || Sequence == 'Walk' || Sequence == 'Run' || Sequence == 'Jump'))
+        return;
+
 	if ( HasAnim(Sequence) )
 	{
 		AnimSequence = Sequence;
@@ -528,10 +718,38 @@ function CHAR_TweenAnim(name Sequence, float Time, optional int Channel)
 
 function bool DoJump(bool bUpdating)
 {
-	local bool result;
-	result = Super.DoJump(bUpdating);
-	CHAR_PlayInAir();
-	return result;
+    local bool Result;
+    local ClientController CC;
+    local RoundSkill R;
+    local name CurrentSequence;
+    local float CurrentFrame,CurrentRate;
+    Result = Super.DoJump(bUpdating);
+    if ( Result && PrePivot.Z == Default.PrePivot.Z + 200
+        && BasicAnim[3] != '' && HasAnim(BasicAnim[3]) )
+    {
+        // Super.DoJump has already performed the real jump. Hero's earlier
+        // pose callback is protected too; this second flight-specific pose
+        // request must not overwrite the same command-owned shot afterwards.
+        CC=ClientController(Controller);
+        if (CC!=None && !CC.IsRemotePlayerPawn() && CC.IsInState('CommandMelee')
+            && CC.PSI!=None && CC.PSI.JobName=='Bow' && CC.PSI.bIsAlive
+            && !bIsDead && !CC.PSI.CheckBuffDontAct())
+        {
+            R=RoundSkill(CC.ThisSkill);
+            if (R!=None && R.Active && R.CommandRound && R.Driver==CC
+                && R.ActionID>0 && R.Channel==0)
+            {
+                GetAnimParams(0,CurrentSequence,CurrentFrame,CurrentRate);
+                if (CurrentSequence=='Shot' || CurrentSequence=='ShotC') return Result;
+            }
+        }
+        // The flight pose can have the same sequence but a zero playback rate.
+        // Start a finite real jump regardless of that cached pose name.
+        CHAR_PlayAnim(BasicAnim[3],AnimSpeed,0.1,0);
+    }
+    else
+        CHAR_PlayInAir();
+    return Result;
 }
 
 function ChangeAnimation()
@@ -555,7 +773,7 @@ exec function Run()
 
 event Landed(vector HitNormal)
 {
-	Super.Landed(HitNormal);
+	Super(Pawn).Landed(HitNormal);
 
 	if ( bIsDead )
 		return;
@@ -563,7 +781,7 @@ event Landed(vector HitNormal)
 	if ( ClientController(Controller) != None )
 		ClientController(Controller).Landfloor(HitNormal);
 
-	if ( Controller == None || (!Controller.IsInState('Attacking') && !Controller.IsInState('SummonSpirit')) )
+	if ( Controller == None || (!Controller.IsInState('CommandMelee') && !Controller.IsInState('Attacking') && !Controller.IsInState('SummonSpirit')) )
 	{
 		CHAR_PlayWaiting();
 	}

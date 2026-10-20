@@ -222,6 +222,73 @@ function TraceAndMakeContext(out TraceContext TC, float DirectionalScale, Actor.
 	local vector Direction;		// 射线方向：从屏幕坐标转换而来的世界空间方向向量
 	local vector MousePos;		// 鼠标屏幕坐标（X, Y）
 
+    local Pawn HoverPawn;
+    local vector HoverViewOrigin, HoverDirection, HoverMousePos, HoverCentre, HoverScaledOrigin, HoverScaledDirection;
+    local float HoverRadius, HoverHeight, HoverA, HoverB, HoverC, HoverDisc, HoverT;
+    if ( ViewportOwner != None && ViewportOwner.Actor != None )
+    {
+        HoverPawn = ViewportOwner.Actor.Pawn;
+        if ( HoverPawn != None && !HoverPawn.bDeleteMe
+            && HoverPawn.PrePivot.Z == HoverPawn.Default.PrePivot.Z + 200 )
+        {
+    HoverViewOrigin = ViewportOwner.Actor.Location;
+    HoverMousePos.X = MouseX;
+    HoverMousePos.Y = MouseY;
+    HoverDirection = ScreenToWorld(HoverMousePos);
+    HoverViewOrigin = ViewportOwner.Actor.Location;
+    TC.Actor = ViewportOwner.Actor.TraceEx(TC.Location,TC.Normal,Situation,HoverViewOrigin + DirectionalScale * HoverDirection,HoverViewOrigin,True);
+    TC.MouseX = MouseX;
+    TC.MouseY = MouseY;
+    TC.Dirty = TC.Actor == None;
+    if ( HoverPawn == None || HoverPawn.bDeleteMe
+        || HoverPawn.PrePivot.Z != HoverPawn.Default.PrePivot.Z + 200 || DirectionalScale <= 0 )
+        return;
+    HoverCentre = HoverPawn.Location;
+    HoverCentre.Z += 200;
+    HoverRadius = FMax(HoverPawn.CollisionRadius,1);
+    HoverHeight = FMax(HoverPawn.CollisionHeight,1);
+    HoverScaledOrigin = HoverViewOrigin - HoverCentre;
+    HoverScaledOrigin.X /= HoverRadius;
+    HoverScaledOrigin.Y /= HoverRadius;
+    HoverScaledOrigin.Z /= HoverHeight;
+    HoverScaledDirection = HoverDirection;
+    HoverScaledDirection.X /= HoverRadius;
+    HoverScaledDirection.Y /= HoverRadius;
+    HoverScaledDirection.Z /= HoverHeight;
+    HoverA = HoverScaledDirection Dot HoverScaledDirection;
+    HoverB = 2 * (HoverScaledOrigin Dot HoverScaledDirection);
+    HoverC = (HoverScaledOrigin Dot HoverScaledOrigin) - 1;
+    HoverDisc = HoverB*HoverB - 4*HoverA*HoverC;
+    if ( HoverA > 0.00000001 && HoverDisc >= 0 )
+    {
+        HoverT = (-HoverB - Sqrt(HoverDisc)) / (2*HoverA);
+        if ( HoverT < 0 )
+            HoverT = (-HoverB + Sqrt(HoverDisc)) / (2*HoverA);
+        if ( HoverT >= 0 && HoverT <= DirectionalScale
+            && (TC.Actor == None || TC.Actor == HoverPawn
+                || VSize(HoverT*HoverDirection) <= VSize(TC.Location - HoverViewOrigin)) )
+        {
+            TC.Actor = HoverPawn;
+            TC.Location = HoverViewOrigin + HoverT*HoverDirection;
+            TC.Normal = Normal(TC.Location - HoverCentre);
+            TC.Dirty = False;
+            return;
+        }
+    }
+    // Remove the old ground-height self hit; preserve world/terrain tracing.
+    if ( TC.Actor == HoverPawn )
+    {
+        TC.Actor = ViewportOwner.Actor.TraceEx(TC.Location,TC.Normal,Situation,HoverViewOrigin + DirectionalScale * HoverDirection,HoverViewOrigin,False);
+
+        TC.Dirty = TC.Actor == None;
+        return;
+    }
+        }
+    }
+
+
+
+
 	// ========== 第一步：获取射线起点 ==========
 	// 使用玩家/摄像机的当前位置作为射线追踪的起点
 	ViewOrigin = ViewportOwner.Actor.Location;
@@ -236,6 +303,7 @@ function TraceAndMakeContext(out TraceContext TC, float DirectionalScale, Actor.
 	// 将鼠标的屏幕坐标转换为世界空间中的方向向量
 	// 这个方向向量表示从摄像机指向鼠标指向的世界空间方向
 	Direction = ScreenToWorld(MousePos);
+    ViewOrigin = ViewportOwner.Actor.Location;
 
 	// ========== 第四步：执行射线追踪 ==========
 	// TraceEx: native函数，执行射线追踪
@@ -327,6 +395,93 @@ function TraceAndMakeContextEx(out TraceContext TC, float DirectionalScale, Acto
 	local vector ClosestHeroLoc;
 	local vector ClosestHeroNorm;
 
+    local Pawn HoverPawn;
+    local vector HoverViewOrigin, HoverDirection, HoverMousePos, HoverCentre, HoverScaledOrigin, HoverScaledDirection;
+    local float HoverRadius, HoverHeight, HoverA, HoverB, HoverC, HoverDisc, HoverT;
+    if ( ViewportOwner != None && ViewportOwner.Actor != None )
+    {
+        HoverPawn = ViewportOwner.Actor.Pawn;
+        if ( HoverPawn != None && !HoverPawn.bDeleteMe
+            && HoverPawn.PrePivot.Z == HoverPawn.Default.PrePivot.Z + 200 )
+        {
+    HoverViewOrigin = ViewportOwner.Actor.Location;
+    HoverMousePos.X = MouseX;
+    HoverMousePos.Y = MouseY;
+    HoverDirection = ScreenToWorld(HoverMousePos);
+    HoverViewOrigin = ViewportOwner.Actor.Location;
+    TC.Actor = ViewportOwner.Actor.TraceEx(TC.Location,TC.Normal,Situation,HoverViewOrigin + DirectionalScale * HoverDirection,HoverViewOrigin,True);
+    TC.MouseX = MouseX;
+    TC.MouseY = MouseY;
+    TC.Dirty = TC.Actor == None;
+    if ( HoverPawn == None || HoverPawn.bDeleteMe
+        || HoverPawn.PrePivot.Z != HoverPawn.Default.PrePivot.Z + 200 || DirectionalScale <= 0 )
+        return;
+    HoverCentre = HoverPawn.Location;
+    HoverCentre.Z += 200;
+    HoverRadius = FMax(HoverPawn.CollisionRadius,1);
+    HoverHeight = FMax(HoverPawn.CollisionHeight,1);
+    HoverScaledOrigin = HoverViewOrigin - HoverCentre;
+    HoverScaledOrigin.X /= HoverRadius;
+    HoverScaledOrigin.Y /= HoverRadius;
+    HoverScaledOrigin.Z /= HoverHeight;
+    HoverScaledDirection = HoverDirection;
+    HoverScaledDirection.X /= HoverRadius;
+    HoverScaledDirection.Y /= HoverRadius;
+    HoverScaledDirection.Z /= HoverHeight;
+    HoverA = HoverScaledDirection Dot HoverScaledDirection;
+    HoverB = 2 * (HoverScaledOrigin Dot HoverScaledDirection);
+    HoverC = (HoverScaledOrigin Dot HoverScaledOrigin) - 1;
+    HoverDisc = HoverB*HoverB - 4*HoverA*HoverC;
+    if ( HoverA > 0.00000001 && HoverDisc >= 0 )
+    {
+        HoverT = (-HoverB - Sqrt(HoverDisc)) / (2*HoverA);
+        if ( HoverT < 0 )
+            HoverT = (-HoverB + Sqrt(HoverDisc)) / (2*HoverA);
+        if ( HoverT >= 0 && HoverT <= DirectionalScale
+            && (TC.Actor == None || TC.Actor == HoverPawn
+                || VSize(HoverT*HoverDirection) <= VSize(TC.Location - HoverViewOrigin)) )
+        {
+            TC.Actor = HoverPawn;
+            TC.Location = HoverViewOrigin + HoverT*HoverDirection;
+            TC.Normal = Normal(TC.Location - HoverCentre);
+            TC.Dirty = False;
+            return;
+        }
+    }
+    // Remove the old ground-height self hit; preserve world/terrain tracing.
+    if ( TC.Actor == HoverPawn )
+    {
+        TC.Actor = ViewportOwner.Actor.TraceEx(TC.Location,TC.Normal,Situation,HoverViewOrigin + DirectionalScale * HoverDirection,HoverViewOrigin,False);
+
+        TC.Dirty = TC.Actor == None;
+        return;
+    }
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	// ========== 第一步：获取射线起点和方向 ==========
 	// 使用玩家/摄像机的当前位置作为射线追踪的起点
 	ViewOrigin = ViewportOwner.Actor.Location;
@@ -337,6 +492,7 @@ function TraceAndMakeContextEx(out TraceContext TC, float DirectionalScale, Acto
 	
 	// 将鼠标的屏幕坐标转换为世界空间中的方向向量
 	Direction = ScreenToWorld(MousePos);
+    ViewOrigin = ViewportOwner.Actor.Location;
 
 	// ========== 第二步：快速追踪获取第一个目标 ==========
 	// 使用 TraceEx 快速获取第一个碰撞到的Actor（保持原有性能）
@@ -559,7 +715,28 @@ function bool KeyEvent(EInputKey Key,EInputAction Action,float Delta)
 	local int ReverseMethod;
 
 	local int RotateViewControl;
-	local string InfoMessage;
+
+    // Read the current event coordinates before UI/world hit tests.
+    if ((Key == IK_LeftMouse || Key == IK_RightMouse)
+        && (Action == IST_Press || Action == IST_Release)
+        && ViewportOwner != None && ViewportOwner.Actor != None
+        && ViewportOwner.Actor.Player != None)
+    {
+        MouseX=ViewportOwner.Actor.Player.WindowsMouseX;
+        MouseY=ViewportOwner.Actor.Player.WindowsMouseY;
+        // Camera motion alone must preserve the existing actor lock.
+        // Ground hits are always refreshed. Pawn locks use the same anchored
+        // per-axis tolerance as OnProbe/IsValidContext, including button release.
+        // Do not move HoverContext.MouseX/Y on each jitter event: accumulated
+        // movement must still cross the original threshold to re-pick.
+        if (HoverContext.Actor == None || HoverContext.Actor.bDeleteMe
+            || !HoverContext.Actor.IsA('Pawn')
+            || (CancelDelta != 0 &&
+                (Abs(HoverContext.MouseX-MouseX) > CancelDelta
+                 || Abs(HoverContext.MouseY-MouseY) > CancelDelta)))
+            HoverContext.Dirty=True;
+    }
+
 
 	/*
 	if (!bAltUtil && bAltPressed && Key == IK_Alt && Action == IST_Release) {
@@ -624,7 +801,7 @@ function bool KeyEvent(EInputKey Key,EInputAction Action,float Delta)
 		}
 	}
 
-	if ( Super.KeyEvent(Key,Action,Delta) )
+	if ( Super(CInterfaceController).KeyEvent(Key,Action,Delta) )
 		return True;
 
 	if ( !SephirothPlayer(ViewportOwner.Actor).PSI.bIsAlive )
@@ -1009,29 +1186,30 @@ function OnProbe();
 /* Dereference dangling pointers */
 function OnActorOut(Actor Actor)
 {
-	/*!@ 2004.2.25 jhjung */
-	if ( NextActionContext.Actor == Actor )
-		ClearContext(NextActionContext);
-	/**/
-	if (HoverContext.Actor == Actor)
-		ClearContext(HoverContext);
-	if (ActionContext.Actor == Actor) {
-		ClearContext(ActionContext);
-		if (IsInState('Lockup'))
-			GotoState('LockupReleasing');
-		else if (Decal != None && IsInState('LockupDetecting'))
-			Decal.SetLockupActor(None);
-	}
-	if (Decal != None && Actor == Decal.LockupActor)
-		Decal.SetLockupActor(None);
-	if (DecalAfter != None && Actor == DecalAfter.LockupActor)
-		DecalAfter.SetLockupActor(None);
+    local bool HadAction;
+    // Pointer equality does not dereference the departing actor.
+    HadAction = ActionContext.Actor == Actor && Actor != None;
+    if (NextActionContext.Actor == Actor) ClearContext(NextActionContext);
+    if (HoverContext.Actor == Actor) ClearContext(HoverContext);
+    if (ActionContext.Actor == Actor) ClearContext(ActionContext);
+    if (!class'SceneRegistry.LiveRegistry'.static.IsRegistered(ViewportOwner) || !class'SceneRegistry.LiveRegistry'.static.IsRegistered(ViewportOwner.Actor)) return;
+    if (!class'SceneRegistry.LiveRegistry'.static.IsLiveActor(Decal,ViewportOwner.Actor.Level)) Decal=None;
+    if (!class'SceneRegistry.LiveRegistry'.static.IsLiveActor(DecalAfter,ViewportOwner.Actor.Level)) DecalAfter=None;
+    if (HadAction)
+    {
+        if (IsInState('Lockup')) GotoState('LockupReleasing');
+        else if (Decal != None && IsInState('LockupDetecting')) Decal.SetLockupActor(None);
+    }
+    if (Decal != None && Actor == Decal.LockupActor) Decal.SetLockupActor(None);
+    if (DecalAfter != None && Actor == DecalAfter.LockupActor) DecalAfter.SetLockupActor(None);
 }
 
 function OnPlayerStopped()
 {
 	if (Decal != None && Decal.DecalState == DS_None)
 		Decal.SetLockupActor(None,vect(0,0,0));
+    if (DecalAfter != None && DecalAfter.DecalState == DS_None && DecalAfter.LockupActor == None)
+        DecalAfter.SetLockupActor(None,vect(0,0,0));
 }
 
 function SelectTargetCursor(EFilterResult Result)
@@ -1662,10 +1840,10 @@ auto state Standing
 			DecalAfter.SetLockupActor(None);
 		}
 
-		// ȣ���� ���� ������, �׳Ѱ� ���;׼� ����.
+		// 龋锟斤拷锟斤拷 锟斤拷锟斤拷 锟斤拷锟斤拷锟斤拷, 锟阶逞帮拷 锟斤拷锟酵咀硷拷 锟斤拷锟斤拷.
 		if (IsValidContext(HoverContext))
 			CopyContext(TC, HoverContext);
-		// ������, ���� ����� �׳Ѱ� ���;׼� ����.
+		// 锟斤拷锟斤拷锟斤拷, 锟斤拷锟斤拷 锟斤拷锟斤拷锟� 锟阶逞帮拷 锟斤拷锟酵咀硷拷 锟斤拷锟斤拷.
 		else 
 		{
 			TraceAndMakeContextEx(TC, 5000, TCST_Click);
@@ -1692,6 +1870,9 @@ auto state Standing
 					GotoState('LockupDetecting');
 				}
 				Decal.SetLockupActor(TC.Actor, TC.Location);
+                        if (Decal.DecalState == DS_None && ViewportOwner.Actor.Pawn != None
+                            && VSize((TC.Location-ViewportOwner.Actor.Pawn.Location)*vect(1,1,0)) <= 30)
+                            OnPlayerStopped();
 			}
 		}
 	}
@@ -1708,119 +1889,122 @@ auto state Standing
 	 */
 	function OnProbe()
 	{
-		local TraceContext TC;			// 追踪上下文，包含追踪到的Actor、位置、法线等信息
-		local EFilterResult FilterResult;	// 目标过滤结果（可攻击、可对话、可移动等）
-		local SephirothPlayer Player;		// 玩家引用
+		local TraceContext TC;			// 杩借釜涓婁笅鏂囷紝鍖呭惈杩借釜鍒扮殑Actor銆佷綅缃�銆佹硶绾跨瓑淇℃伅
+		local EFilterResult FilterResult;	// 鐩�鏍囪繃婊ょ粨鏋滐紙鍙�鏀诲嚮銆佸彲瀵硅瘽銆佸彲绉诲姩绛夛級
+		local SephirothPlayer Player;		// 鐜╁�跺紩鐢�
 
-		local bool debugIsMove;			// 调试用：是否在移动
+		local bool debugIsMove;			// 璋冭瘯鐢�锛氭槸鍚﹀湪绉诲姩
 
-		// ========== 第一部分：处理模态界面和UI交互 ==========
-		// 如果当前处于模态界面状态且正在处理界面交互，直接设置光标为界面光标
+		// ========== 绗�涓�閮ㄥ垎锛氬�勭悊妯℃�佺晫闈㈠拰UI浜や簰 ==========
+		// 濡傛灉褰撳墠澶勪簬妯℃�佺晫闈㈢姸鎬佷笖姝ｅ湪澶勭悊鐣岄潰浜や簰锛岀洿鎺ヨ�剧疆鍏夋爣涓虹晫闈㈠厜鏍�
 		if (Modal() && bHandlingInterface)
 			SephirothPlayer(ViewportOwner.Actor).CursorToInterface();
-		// 如果鼠标不在HUD界面上（即鼠标在游戏世界中）
+		// 濡傛灉榧犳爣涓嶅湪HUD鐣岄潰涓婏紙鍗抽紶鏍囧湪娓告垙涓栫晫涓�锛�
 		else if (!HudInterface.PointCheck()) 
 		{
-			// ========== 第二部分：处理游戏世界中的目标检测 ==========
-			// 如果之前已经有一个有效的悬停上下文（HoverContext），且鼠标没有移动太多
-			// 则直接使用该上下文，避免每帧都重新追踪（性能优化）
+			// ========== 绗�浜岄儴鍒嗭細澶勭悊娓告垙涓栫晫涓�鐨勭洰鏍囨��娴� ==========
+			// 濡傛灉涔嬪墠宸茬粡鏈変竴涓�鏈夋晥鐨勬偓鍋滀笂涓嬫枃锛圚overContext锛夛紝涓旈紶鏍囨病鏈夌Щ鍔ㄥお澶�
+			// 鍒欑洿鎺ヤ娇鐢ㄨ�ヤ笂涓嬫枃锛岄伩鍏嶆瘡甯ч兘閲嶆柊杩借釜锛堟�ц兘浼樺寲锛�
 			if (IsValidContext(HoverContext, CancelDelta))
 			{
-				// 直接使用缓存的悬停目标，根据目标类型更新光标
+				// 鐩存帴浣跨敤缂撳瓨鐨勬偓鍋滅洰鏍囷紝鏍规嵁鐩�鏍囩被鍨嬫洿鏂板厜鏍�
 				SelectTargetCursor(FilterActor(HoverContext.Actor));
 			}
 			else 
 			{
-				// 没有有效的悬停上下文，需要执行新的追踪
-				// 清除旧的悬停上下文
+				// 娌℃湁鏈夋晥鐨勬偓鍋滀笂涓嬫枃锛岄渶瑕佹墽琛屾柊鐨勮拷韪�
+				// 娓呴櫎鏃х殑鎮�鍋滀笂涓嬫枃
 				ClearContext(HoverContext);
 				
-				// 根据是否按下左键，使用不同的追踪情况类型
-				// TCST_Click: 点击追踪（左键按下时）
-				// TCST_Reserved2: 普通悬停追踪（左键未按下时）
-				// 5000: 追踪距离（单位：Unreal单位）
-				// 使用 TraceAndMakeContextEx 增强版追踪，解决友方遮挡敌方的问题
+				// 鏍规嵁鏄�鍚︽寜涓嬪乏閿�锛屼娇鐢ㄤ笉鍚岀殑杩借釜鎯呭喌绫诲瀷
+				// TCST_Click: 鐐瑰嚮杩借釜锛堝乏閿�鎸変笅鏃讹級
+				// TCST_Reserved2: 鏅�閫氭偓鍋滆拷韪�锛堝乏閿�鏈�鎸変笅鏃讹級
+				// 5000: 杩借釜璺濈�伙紙鍗曚綅锛歎nreal鍗曚綅锛�
+				// 浣跨敤 TraceAndMakeContextEx 澧炲己鐗堣拷韪�锛岃В鍐冲弸鏂归伄鎸℃晫鏂圭殑闂�棰�
 				if (bLButtonDown)
 					TraceAndMakeContextEx(TC, 5000, TCST_Click);
 				else
 					TraceAndMakeContextEx(TC, 5000, TCST_Reserved2);
 
-				// 如果追踪到了有效的目标
+				// 濡傛灉杩借釜鍒颁簡鏈夋晥鐨勭洰鏍�
 				if (IsValidContext(TC)) 
 				{
-					// 过滤目标，判断目标类型（可攻击、可对话、可移动等）
+					// 杩囨护鐩�鏍囷紝鍒ゆ柇鐩�鏍囩被鍨嬶紙鍙�鏀诲嚮銆佸彲瀵硅瘽銆佸彲绉诲姩绛夛級
 					FilterResult = FilterActor(TC.Actor);
 
-					// ========== 处理可移动目标（地面、地形等）==========
-					// 如果左键按下且目标是可移动的（地面），则执行移动操作
+					// ========== 澶勭悊鍙�绉诲姩鐩�鏍囷紙鍦伴潰銆佸湴褰㈢瓑锛�==========
+					// 濡傛灉宸﹂敭鎸変笅涓旂洰鏍囨槸鍙�绉诲姩鐨勶紙鍦伴潰锛夛紝鍒欐墽琛岀Щ鍔ㄦ搷浣�
 					if (bLButtonDown && FilterResult == FR_Movable) 
 					{
-						SephirothPlayer(ViewportOwner.Actor).SelectActor(None);	// 清除选中目标
-						ControllerReceiveContext(TC, IT_Move);					// 接收移动上下文
-						Decal.Moving(TC.Normal);									// 设置移动标记
-						Decal.SetLockupActor(TC.Actor, TC.Location);				// 锁定移动目标位置
+						SephirothPlayer(ViewportOwner.Actor).SelectActor(None);	// 娓呴櫎閫変腑鐩�鏍�
+						ControllerReceiveContext(TC, IT_Move);					// 鎺ユ敹绉诲姩涓婁笅鏂�
+						Decal.Moving(TC.Normal);									// 璁剧疆绉诲姩鏍囪��
+						Decal.SetLockupActor(TC.Actor, TC.Location);
+                        if (Decal.DecalState == DS_None && ViewportOwner.Actor.Pawn != None
+                            && VSize((TC.Location-ViewportOwner.Actor.Pawn.Location)*vect(1,1,0)) <= 30)
+                            OnPlayerStopped();				// 閿佸畾绉诲姩鐩�鏍囦綅缃�
 					}
-					// ========== 处理无效目标 ==========
-					// 如果目标无效，清除选中状态
+					// ========== 澶勭悊鏃犳晥鐩�鏍� ==========
+					// 濡傛灉鐩�鏍囨棤鏁堬紝娓呴櫎閫変腑鐘舵��
 					else if (FilterResult == FR_None)
 						SephirothPlayer(ViewportOwner.Actor).SelectActor(None);
-					// ========== 处理有效目标（可攻击、可对话、可拾取等）==========
+					// ========== 澶勭悊鏈夋晥鐩�鏍囷紙鍙�鏀诲嚮銆佸彲瀵硅瘽銆佸彲鎷惧彇绛夛級==========
 					else 
 					{
-						// 如果目标不是可移动的、不是不可拾取的物品、且不是玩家自身
-						// 则保存为悬停上下文，用于下一帧的快速检测（避免重复追踪）
+						// 濡傛灉鐩�鏍囦笉鏄�鍙�绉诲姩鐨勩�佷笉鏄�涓嶅彲鎷惧彇鐨勭墿鍝併�佷笖涓嶆槸鐜╁�惰嚜韬�
+						// 鍒欎繚瀛樹负鎮�鍋滀笂涓嬫枃锛岀敤浜庝笅涓�甯х殑蹇�閫熸��娴嬶紙閬垮厤閲嶅�嶈拷韪�锛�
 						if (FilterResult != FR_Movable && FilterResult != FR_NotOwnedPickable && TC.Actor != ViewportOwner.Actor.Pawn)
 							CopyContext(HoverContext, TC);
 						
-						// 选中当前目标（用于显示目标信息、高亮等）
+						// 閫変腑褰撳墠鐩�鏍囷紙鐢ㄤ簬鏄剧ず鐩�鏍囦俊鎭�銆侀珮浜�绛夛級
 						SephirothPlayer(ViewportOwner.Actor).SelectActor(TC.Actor);
 					}
 					
-					// 根据过滤结果更新鼠标光标状态
-					// 例如：可攻击目标 -> 攻击光标，可对话目标 -> 对话光标等
+					// 鏍规嵁杩囨护缁撴灉鏇存柊榧犳爣鍏夋爣鐘舵��
+					// 渚嬪�傦細鍙�鏀诲嚮鐩�鏍� -> 鏀诲嚮鍏夋爣锛屽彲瀵硅瘽鐩�鏍� -> 瀵硅瘽鍏夋爣绛�
 					SelectTargetCursor(FilterResult);
 				}
 			}
 		}
-		// ========== 第三部分：处理HUD界面上的鼠标状态 ==========
-		// 如果鼠标在HUD界面上
+		// ========== 绗�涓夐儴鍒嗭細澶勭悊HUD鐣岄潰涓婄殑榧犳爣鐘舵�� ==========
+		// 濡傛灉榧犳爣鍦℉UD鐣岄潰涓�
 		else 
 		{
-			// 如果正在处理界面交互
+			// 濡傛灉姝ｅ湪澶勭悊鐣岄潰浜や簰
 			if (bHandlingInterface) 
 			{
-				// 根据界面元素类型设置不同的光标状态
+				// 鏍规嵁鐣岄潰鍏冪礌绫诲瀷璁剧疆涓嶅悓鐨勫厜鏍囩姸鎬�
 				switch (InterfaceHitType) 
 				{
 					case class'GConst'.Default.HIT_Minimap:
-						SephirothPlayer(ViewportOwner.Actor).CursorToMinimap();		// 小地图光标
+						SephirothPlayer(ViewportOwner.Actor).CursorToMinimap();		// 灏忓湴鍥惧厜鏍�
 						break;
 					case class'GConst'.Default.HIT_Gauge:
-						SephirothPlayer(ViewportOwner.Actor).CursorToGauge();		// 血条/蓝条光标
+						SephirothPlayer(ViewportOwner.Actor).CursorToGauge();		// 琛�鏉�/钃濇潯鍏夋爣
 						break;
 					case class'GConst'.Default.HIT_DialogLink:
-						SephirothPlayer(ViewportOwner.Actor).CursorToDialogLink();	// 对话链接光标
+						SephirothPlayer(ViewportOwner.Actor).CursorToDialogLink();	// 瀵硅瘽閾炬帴鍏夋爣
 						break;
 					default:
-						SephirothPlayer(ViewportOwner.Actor).CursorToInterface();	// 默认界面光标
+						SephirothPlayer(ViewportOwner.Actor).CursorToInterface();	// 榛樿�ょ晫闈㈠厜鏍�
 						break;
 				}
 			}
-			// 如果不在处理界面交互，设置为普通光标
+			// 濡傛灉涓嶅湪澶勭悊鐣岄潰浜や簰锛岃�剧疆涓烘櫘閫氬厜鏍�
 			else
 				SephirothPlayer(ViewportOwner.Actor).CursorToNormal();
 		}
 
-		// ========== 第四部分：处理自动攻击逻辑 ==========
+		// ========== 绗�鍥涢儴鍒嗭細澶勭悊鑷�鍔ㄦ敾鍑婚�昏緫 ==========
 		Player = SephirothPlayer(ViewportOwner.Actor);
 
-		// 如果启用了自动攻击插件，且（自动攻击或自动施法）已启用
-		// 且距离上次攻击时间超过0.5秒（防止过于频繁的攻击）
+		// 濡傛灉鍚�鐢ㄤ簡鑷�鍔ㄦ敾鍑绘彃浠讹紝涓旓紙鑷�鍔ㄦ敾鍑绘垨鑷�鍔ㄦ柦娉曪級宸插惎鐢�
+		// 涓旇窛绂讳笂娆℃敾鍑绘椂闂磋秴杩�0.5绉掞紙闃叉�㈣繃浜庨�戠箒鐨勬敾鍑伙級
 		if(bPluginAutoAttackEnabled && (bPluginAutoAttack || bPluginAutoCast) && (ViewportOwner.Actor.Level.TimeSeconds - ftimeAttacking > 0.5))
 		{
-			// 更新攻击时间戳
+			// 鏇存柊鏀诲嚮鏃堕棿鎴�
 			fTimeAttacking = ViewportOwner.Actor.Level.TimeSeconds;
-			// 开始自动攻击
+			// 寮�濮嬭嚜鍔ㄦ敾鍑�
 			BeginAutoAttack();
 		}
 

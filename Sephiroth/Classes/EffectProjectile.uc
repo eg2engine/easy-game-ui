@@ -225,6 +225,16 @@ event Tick(float Delta)
 	local vector CurrLocation, Start, End;
 	local actor HitActor;
 
+    // Stop before reading a target that is being destroyed during flight.
+    if ( bDeleteMe )
+        return;
+    if ( TargetActor != None && TargetActor.bDeleteMe )
+    {
+        TargetActor = None;
+        Destroy();
+        return;
+    }
+
 	monsterPos = TargetLocation;
 	if (TargetActor != None)
 		monsterPos = TargetActor.Location;

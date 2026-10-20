@@ -109,7 +109,7 @@ simulated event PostBeginPlay()
 // 每帧先检查所属对象的停止或生命周期状态，失效时不继续访问效果资源。
 simulated event Tick(float DeltaTime)
 {
-    local vector TailLocal, TailWorld;
+    local vector TailLocal, TailWorld, TailRotated, TipRotated;
     local float TailSpeed, GlowPulse;
     local float TravelTime, Bloom, Pulse, Surge;
     local bool bBlooming;
@@ -172,7 +172,8 @@ simulated event Tick(float DeltaTime)
     }
     // Measure tip travel, including swings; clamp teleports and first-frame spikes.
     P = HeadGlowCenter;
-    Tip = Location + (P >> Rotation);
+    TipRotated = P >> Rotation;
+    Tip = Location + TipRotated;
     Speed = 0;
     TipVelocity.X = 0; TipVelocity.Y = 0; TipVelocity.Z = 0;
     if (bTipReady && DeltaTime > 0.001 && VSize(Tip - LastTip) < 180)
@@ -183,7 +184,7 @@ simulated event Tick(float DeltaTime)
     LastTip = Tip;
     bTipReady = True;
     MotionBlend += (Speed - MotionBlend) * FMin(DeltaTime * 6, 1.0);
-    Emitters[18].StartLocationOffset = P >> Rotation;
+    Emitters[18].StartLocationOffset = TipRotated;
     Emitters[18].LifetimeRange.Min = 0.12 + MotionBlend * 0.28;
     Emitters[18].LifetimeRange.Max = 0.16 + MotionBlend * 0.32;
     Emitters[18].ColorScale[0].Color.A = byte(35 + MotionBlend * 60);
@@ -215,7 +216,8 @@ simulated event Tick(float DeltaTime)
         Emitters[I].ColorMultiplierRange.Z.Max = GlowPulse;
     }
     TailLocal = TailTrailCenter;
-    TailWorld = Location + (TailLocal >> Rotation);
+    TailRotated = TailLocal >> Rotation;
+    TailWorld = Location + TailRotated;
     TailSpeed = 0;
     if (bTailReady && DeltaTime > 0.001 && VSize(TailWorld - LastTail) < 180)
         // Remove translation: walking alone must not light the tail flame.
@@ -231,7 +233,7 @@ simulated event Tick(float DeltaTime)
         bTailTrailing = TailMotion >= 0.35 && TailSpeed >= 0.35;
     Emitters[19].Disabled = !bTailTrailing;
     Emitters[23].Disabled = !bTailTrailing;
-    Emitters[23].StartLocationOffset = TailLocal >> Rotation;
+    Emitters[23].StartLocationOffset = TailRotated;
     Emitters[23].LifetimeRange.Min = 0.12 + TailMotion * 0.3;
     Emitters[23].LifetimeRange.Max = 0.18 + TailMotion * 0.4;
     Emitters[23].ColorScale[0].Color.A = byte(55 + TailMotion * 130);

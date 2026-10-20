@@ -20,6 +20,14 @@ var string m_sTitle;
 function OnInit()
 {
 	local int i;
+
+    if (PageNames.Length > 0)
+        PageNames[0] = "UIVisibility.PageScreenVisibility";
+
+
+    if (PageNames.Length > 3)
+        PageNames[3] = "UIVisibility.PageGameVisibility";
+
 	for (i=0;i<PageNames.Length;i++) {
 		Pages[i] = COptionPage(AddInterface(PageNames[i]));
 		Pages[i].InitComponents();
@@ -84,7 +92,7 @@ function OpenPage(int PageIndex)
 		}
 	}
 
-	SetTabTexture(PageIndex + IDC_SCREEN);	//ÆäÀÌÁö¸¦ ¿­°í ÇØ´çÅÇÀ¸·Î º¯°æ	Sinhyub.
+	SetTabTexture(PageIndex + IDC_SCREEN);	//å…¶æžç˜¤ç”« å‡¯ç»Š ç§¦å¯¸å¾˜æ è‚º å‡½ç‰ˆ	Sinhyub.
 }
 
 function ApplyOption()
@@ -98,7 +106,7 @@ function ApplyOption()
 	Parent.NotifyInterface(Self,INT_Close);
 }
 
-function SetTabTexture(int SelectedComponentId)		//modified by yj		//¼±ÅÃµÈ ÅÇ°ú ±×·¸Áö ¾ÊÀº ÅÇÀÇ ÅØ½ºÃÄ¸¦ ±¸ºÐÇÑ´Ù.
+function SetTabTexture(int SelectedComponentId)		//modified by yj		//æ€¥ç¶ç­‰ å¾˜è‹ž å¼ŠçŠ¯ç˜¤ è‡¼ç¯® å¾˜ç‹¼ å’†èƒ¶åªšç”« å¤‡ç›’èŒ„ä¿ƒ.
 {
 	local int i;
 	

@@ -8,6 +8,8 @@ var Actor Explosion;
 
 event SetRadius(int Radius)
 {
+    ;
+
 	if (DropClass != None)
 		Drop = Spawn(DropClass,Self);
 	if (ExplosionClass != None)
@@ -36,6 +38,7 @@ event SetRadius(int Radius)
 			Emitter(Explosion).Emitters[1].StartLocationRange.Y.Max = Radius;
 		}
 	}
+    ;
 }
 
 function PlaySpawnSound(Sound Snd)
@@ -45,24 +48,34 @@ function PlaySpawnSound(Sound Snd)
 
 event Destroyed()
 {
-	if (Drop != None)
-		Drop.Destroy();
+    local Actor Fx;
+    ;
 
-	if (Explosion != None)
-		Explosion.Destroy();
-
-	Super.Destroyed();
+    Fx = Drop;
+    Drop = None;
+    if (Fx != None && !Fx.bDeleteMe) Fx.Destroy();
+    Fx = Explosion;
+    Explosion = None;
+    if (Fx != None && !Fx.bDeleteMe) Fx.Destroy();
+    // Include children stored by subclasses in their own arrays.
+    foreach ChildActors(class'Actor', Fx)
+        if (Fx != None && !Fx.bDeleteMe && Fx.Owner == Self) Fx.Destroy();
+    Super(Actor).Destroyed();
 }
 
 //hanullo---
 event LostChild(Actor Child)
 {
-	if (Drop != None && Child == Drop) {
-		Drop = None;
-	}
-	else if (Explosion != None && Child == Explosion) {
-		Explosion = None;
-	}
+    local Actor Remaining;
+    ;
+
+    if (Child == Drop) Drop = None;
+    if (Child == Explosion) Explosion = None;
+    // Explicit-duration subclasses retain their original lifetime.
+    if (bDeleteMe || LifeSpan > 0) return;
+    foreach ChildActors(class'Actor', Remaining)
+        if (Remaining != None && Remaining != Child && !Remaining.bDeleteMe && Remaining.Owner == Self) return;
+    Destroy();
 }
 //---hanullo
 

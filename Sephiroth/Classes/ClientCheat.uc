@@ -22,20 +22,32 @@ exec function ResetCamera()
 
 exec function ZoomCamera(int zoom)
 {
-	local Rotator rot;
-	
-//	//Log("ZoomCamera"@zoom@ViewType);
-
-	if (ViewType != FirstPerson) {
-		CameraDist = clamp(CameraDist + zoom, MinCameraDist, MaxCameraDist);
-		// chkim for camera ....
-		if( ViewType == QuaterView ) {
-			rot = Rotation;
-			rot.Pitch = -8192.0 * (CameraDist-MinCameraDist)/(MaxCameraDist-MinCameraDist);
-			SetRotation(rot);
-		}
-	}
-	//Log("CameraDist"@CameraDist);
+    local Rotator rot;
+    local int AngleDistance;
+    if (ViewType != FirstPerson)
+    {
+        if (ViewType == QuaterView && !bCameraShaking)
+        {
+            AngleDistance=Clamp(class'FreeviewSettings'.static.AutoDistanceForAngle(Rotation)+zoom,25,40);
+            rot=Rotation;
+            rot.Pitch=-8192.0*(AngleDistance-25)/15;
+            SetRotation(rot);
+            class'FreeviewSettings'.static.SaveAngle(rot);
+            return;
+        }
+        if (bCameraShaking)
+            CameraDist=Clamp(ShakeFactor.OldOffset.Y+zoom,MinCameraDist,MaxCameraDist);
+        else
+            CameraDist=Clamp(CameraDist+zoom,MinCameraDist,MaxCameraDist);
+        if (ViewType == BehindFree && !bCameraShaking)
+            class'FreeviewSettings'.static.SaveDistance(CameraDist);
+        if (ViewType == QuaterView)
+        {
+            rot=Rotation;
+            rot.Pitch=-8192.0*(CameraDist-MinCameraDist)/(MaxCameraDist-MinCameraDist);
+            SetRotation(rot);
+        }
+    }
 }
 
 exec function SetCameraRange(int Min, int Max)
@@ -285,7 +297,17 @@ exec function Animate(name Seq,int Index)
 
 exec function AnimateSolo(name Seq)
 {
-	Pawn.PlayAnim(Seq);
+    local Character VisualCharacter;
+    if ( Pawn == None || Pawn.bDeleteMe )
+        return;
+    VisualCharacter = Character(Pawn);
+    if ( VisualCharacter == None || VisualCharacter.bIsDead || !Pawn.HasAnim(Seq) )
+        return;
+    // Cosmetic local preview only. No actor state change or server message.
+    if ( Seq == 'Pain' || Seq == 'PainS' || Seq == 'Pain01' )
+        VisualCharacter.bJustDamaged = True;
+    VisualCharacter.AnimSequence = Seq;
+    Pawn.PlayAnim(Seq,1.0,0.15,0);
 }
 
 exec function TestAddInt64()

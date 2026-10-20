@@ -38,9 +38,9 @@ simulated function FinalBlend MakeSurfaceLayer(Material Pattern, byte R, byte G,
 {
     local ColorModifier Tint;
     local FinalBlend F;
-    Tint=new(Self) class'ColorModifier';
-    F=new(Self) class'FinalBlend';
-    if (Tint==None || F==None) return None;
+    Tint=new(Self) class'ObjectStore.OwnedColor';
+    F=new(Self) class'ObjectStore.OwnedBlend';
+    if (Tint==None || F==None) { class'ObjectStore.Lifetime'.static.ReleaseColor(Tint,Self); class'ObjectStore.Lifetime'.static.ReleaseBlend(F,Self); return None; }
     Tint.Material=Pattern;
     Tint.Color.R=R; Tint.Color.G=G; Tint.Color.B=B; Tint.Color.A=255;
     Tint.AlphaBlend=False;
@@ -190,6 +190,7 @@ simulated function ClearLights()
 // 幂等地永久停止更新并清理所属资源；不在此函数内递归销毁自身。
 simulated function StopWork()
 {
+    local FinalBlend OldMaterial;
     if (bStopping)
         return;
     bStopping=True;
@@ -198,8 +199,10 @@ simulated function StopWork()
     bEligible=False;
     ClearEyes();
     ClearLights();
-    SurfaceMaterials[0]=None;
-    SurfaceMaterials[1]=None;
+    OldMaterial=SurfaceMaterials[0]; SurfaceMaterials[0]=None;
+    class'ObjectStore.Lifetime'.static.ReleaseBlend(OldMaterial,Self);
+    OldMaterial=SurfaceMaterials[1]; SurfaceMaterials[1]=None;
+    class'ObjectStore.Lifetime'.static.ReleaseBlend(OldMaterial,Self);
 }
 
 static function int AffixCount(SephirothItem Item)

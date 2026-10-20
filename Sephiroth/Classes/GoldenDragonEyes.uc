@@ -17,8 +17,8 @@ var bool bStopping;
 
 simulated event PostBeginPlay()
 {
-    Super.PostBeginPlay();
-    RimMaterial=new(Self) class'ColorModifier';
+    Super(Actor).PostBeginPlay();
+    if (RimMaterial==None) RimMaterial=new(Self) class'ObjectStore.OwnedColor';
     if (RimMaterial!=None)
     {
         RimMaterial.Material=Texture'Engine.WhiteTexture';
@@ -55,6 +55,7 @@ simulated function ClearSpecial()
 // 幂等地永久停止更新并清理所属资源；不在此函数内递归销毁自身。
 simulated function StopWork()
 {
+    local ColorModifier OldMaterial;
     local int I;
     local GoldenDragonEyeLayer OldLayer;
     if (bStopping)
@@ -73,7 +74,9 @@ simulated function StopWork()
         }
     }
     ClearSpecial();
-    RimMaterial=None;
+    Skins.Length=0;
+    OldMaterial=RimMaterial; RimMaterial=None;
+    class'ObjectStore.Lifetime'.static.ReleaseColor(OldMaterial,Self);
 }
 
 // 仅在眼部与宿主存活时同步骨骼；装备资格控制附加眼光与电弧。

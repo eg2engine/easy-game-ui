@@ -141,8 +141,8 @@ function OnInit()
 
 
 	//@by wj(08/18)------
-	BgColor = new(None) class'ConstantColor';
-	BgBlend = new(None) class'FinalBlend';
+	if (BgColor == None) BgColor = new(Self) class'ObjectStore.OwnedConstant';
+	if (BgBlend == None) BgBlend = new(Self) class'ObjectStore.OwnedBlend';
 
 	BgBlend.Material = BgColor;
 	BgBlend.FrameBufferBlending = BgBlend.EFrameBufferBlending.FB_AlphaBlend;
@@ -175,9 +175,8 @@ function OnFlush()
 	SephirothInterface(Parent).ItemInfo.SetInfo(None);
 	SephirothInterface(Parent).SkillInfo.SetInfo(None);
 	SephirothInterface(Parent).InfoBox.SetInfo(None);
-	DynamicUnloadObject(BgColor);
-	DynamicUnloadObject(BgBlend);
-	Super.OnFlush();
+	class'ObjectStore.UILifetime'.static.ReleasePair(BgBlend,BgColor,Self);
+	Super(CSelectable).OnFlush();
 }
 
 function Layout(Canvas C)
@@ -1936,6 +1935,12 @@ function bool PointCheck()
 function ResetDefaultPosition()		//2009.10.27.Sinhyub
 {
 	bNeedLayoutUpdate = True;
+}
+
+event Destroyed()
+{
+    class'ObjectStore.UILifetime'.static.ReleasePair(BgBlend,BgColor,Self);
+    Super(CSelectable).Destroyed();
 }
 
 defaultproperties

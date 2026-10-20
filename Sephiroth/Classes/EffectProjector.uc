@@ -9,11 +9,14 @@ simulated function PostBeginPlay()
 	local vector Start, End, Loc;
 	local float EmitOffset;
 	local Rotator	Rot;
+    ;
 
-	Super.PostBeginPlay();
+
+	Super(Projector).PostBeginPlay();
 
 	if (Owner != None)
 		IsVoodoo = bool(Owner.ConsoleCommand("IsVoodoo"));
+	;
 	if (IsVoodoo)
 		return;
 		
@@ -32,7 +35,8 @@ simulated function PostBeginPlay()
 	SetRotation(Rot);
 	DetachProjector(true);
 	AttachProjector();
-	ConsoleCommand("IncreaseEffectProjector");
+
+    ;
 
 	if (SpawnSound == None && SpawnSoundString != "")
 		SpawnSound = Sound(DynamicLoadObject(SpawnSoundString,class'Sound'));
@@ -43,8 +47,10 @@ simulated function PostBeginPlay()
 
 event Destroyed()
 {
+    ;
+
 	ConsoleCommand("DecreaseEffectProjector");
-	Super.Destroyed();
+	Super(Actor).Destroyed();
 }
 
 function PlaySpawnSound(Sound Snd)

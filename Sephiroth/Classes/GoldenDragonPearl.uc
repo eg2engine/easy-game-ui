@@ -7,8 +7,8 @@ var ColorModifier GoldSurface;
 
 simulated event PostBeginPlay()
 {
-    Super.PostBeginPlay();
-    GoldSurface=new(Self) class'ColorModifier';
+    Super(Actor).PostBeginPlay();
+    if (GoldSurface==None) GoldSurface=new(Self) class'ObjectStore.OwnedColor';
     if (GoldSurface!=None)
     {
         GoldSurface.Material=Texture'Engine.WhiteTexture';
@@ -27,6 +27,15 @@ simulated function SyncPearl(vector Center, float Radius)
 {
     SetLocation(Center);
     SetDrawScale(Radius);
+}
+
+simulated event Destroyed()
+{
+    local ColorModifier OldMaterial;
+    Skins.Length=0;
+    OldMaterial=GoldSurface; GoldSurface=None;
+    class'ObjectStore.Lifetime'.static.ReleaseColor(OldMaterial,Self);
+    Super(Actor).Destroyed();
 }
 
 defaultproperties

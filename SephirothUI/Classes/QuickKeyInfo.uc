@@ -37,7 +37,7 @@ static function QuickKeyInfo Create(PlayerController owner_controller,
 {
 	local QuickKeyInfo qk;
 
-	qk = new(owner_controller) class'QuickKeyInfo';
+	qk = new(quickkeybutton) class'ObjectStore.OwnedQuickInfo';
 	if( qk != None )
 	{
 		qk.PlayerOwner = owner_controller;

@@ -121,8 +121,8 @@ event Destroyed()
 // CInterface::OnInit()
 function OnInit()
 {
-	BgColor = new(none) class'ConstantColor';
-	BgBlend = new(none) class'FinalBlend';
+	if (BgColor == None) BgColor = new(Self) class'ObjectStore.OwnedConstant';
+	if (BgBlend == None) BgBlend = new(Self) class'ObjectStore.OwnedBlend';
 	BgBlend.Material = BgColor;
 	BgBlend.FrameBufferBlending = BgBlend.EFrameBufferBlending.FB_AlphaBlend;
 	BgColor.Color = class'Canvas'.static.MakeColor(0,0,255,100);
@@ -133,11 +133,10 @@ function OnInit()
 // CInterface::OnFlush()
 function OnFlush()
 {
-	QuickKeyInfo	= None;
+	class'ObjectStore.UILifetime'.static.ReleaseQuickInfo(QuickKeyInfo,Self);
 	DisplayTexture	= None;
 
-	BgBlend = None;
-	BgColor = None;
+	class'ObjectStore.UILifetime'.static.ReleasePair(BgBlend,BgColor,Self);
 }
 
 // CInterface::Layout

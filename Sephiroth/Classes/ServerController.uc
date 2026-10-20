@@ -273,55 +273,101 @@ function DebugLog(string Message)
 	Level.GetLocalPlayerController().myHud.AddMessage(1,"DebugLog ServerController: "@message,class'Canvas'.Static.MakeColor(128,255,255));;
 }
 
+// Verify scene membership before reading the candidate's properties.
+// Keep this helper free of persistent fields: ServerController is native.
+function bool IsLiveServerPawn(Pawn CheckedPawn)
+{
+    if (bDeleteMe || Level == None || CheckedPawn == None || Pawn != CheckedPawn)
+        return False;
+    return class'SceneRegistry.LiveRegistry'.static.IsLiveActor(CheckedPawn,Level);
+}
+
 event Tick(float DeltaTime)  // 2003.6.18 by BK
 {
-	Super.Tick(DeltaTime);
-	MonsterMove(DeltaTime);
+    local Pawn CheckedPawn;
+
+    CheckedPawn = Pawn;
+    if ( !IsLiveServerPawn(CheckedPawn) )
+        return;
+
+    Super.Tick(DeltaTime);
+    if ( !IsLiveServerPawn(CheckedPawn) )
+        return;
+    MonsterMove(DeltaTime);
 }
 
 auto state CreatureWalking
 {
 	function AnimEnd(int Channel)
-	{
-		local float Rate, Frame;
-		local name AnimName;
+    {
+        local float Rate, Frame;
+        local name AnimName;
+        local Creature WalkingCreature;
 
-		if (Pawn != None && !Pawn.bDeleteMe) 
-		{
-			Pawn.GetAnimParams(0,AnimName, Frame, Rate);
-		
-			if (AnimName != Creature(Pawn).BasicAnim[0] && AnimName != Creature(Pawn).BasicAnim[1] && AnimName != Creature(Pawn).BasicAnim[2] && AnimName != Creature(Pawn).BasicAnim[3])
-				Pawn.AppInstTag = 0;
-			if (Channel == 0 && !Character(Pawn).bIsDead) 
-			{
-				Character(Pawn).HideAfterImage();
-				Character(Pawn).SetActionStage(STAGE_End);
-				Character(Pawn).CHAR_CreatureWalkingAnim();
-			}
-		}
-	}
+        if ( !IsLiveServerPawn(Pawn) )
+            return;
+        WalkingCreature = Creature(Pawn);
+        if ( WalkingCreature == None )
+            return;
+
+        WalkingCreature.GetAnimParams(0, AnimName, Frame, Rate);
+        if ( !IsLiveServerPawn(WalkingCreature) )
+            return;
+
+        if ( AnimName != WalkingCreature.BasicAnim[0]
+            && AnimName != WalkingCreature.BasicAnim[1]
+            && AnimName != WalkingCreature.BasicAnim[2]
+            && AnimName != WalkingCreature.BasicAnim[3] )
+            WalkingCreature.AppInstTag = 0;
+
+        if ( Channel == 0 && !WalkingCreature.bIsDead )
+        {
+            WalkingCreature.HideAfterImage();
+            if ( !IsLiveServerPawn(WalkingCreature) )
+                return;
+            WalkingCreature.SetActionStage(STAGE_End);
+            if ( !IsLiveServerPawn(WalkingCreature) )
+                return;
+            WalkingCreature.CHAR_CreatureWalkingAnim();
+        }
+    }
 
 	function MonsterMove(float DeltaTime)  // 2003.6.18 by BK
-	{
-		local float Rate, Frame;
-		local name AnimName;
+    {
+        local float Rate, Frame;
+        local name AnimName;
+        local Creature WalkingCreature;
 
-		Pawn.GetAnimParams(0,AnimName, Frame, Rate);
+        if ( !IsLiveServerPawn(Pawn) )
+            return;
+        WalkingCreature = Creature(Pawn);
+        if ( WalkingCreature == None )
+            return;
 
-		if((AnimName == Creature(Pawn).BasicAnim[1]) && (Creature(Pawn).bWalkAnim == False))
-			Creature(Pawn).bWalkAnim = True;
-	}
+        // Once the flag is true, the query below cannot change any state.
+        if (WalkingCreature.bWalkAnim) return;
+        WalkingCreature.GetAnimParams(0, AnimName, Frame, Rate);
+        if ( !IsLiveServerPawn(WalkingCreature) )
+            return;
+
+        if ( AnimName == WalkingCreature.BasicAnim[1]
+            && !WalkingCreature.bWalkAnim )
+            WalkingCreature.bWalkAnim = True;
+    }
 
 Begin:
-	if (!Character(Pawn).bIsDead) 
-	{
-//		Character(Pawn).CHAR_CheckCreatureWalkAnim(); // delete 2003.7.1 by BK
-		if (Destination != vect(0,0,0) && Destination != Pawn.Location) 
-		{
-			Character(Pawn).CHAR_PlayWalking(); // 2003.7.1 by BK
-			MoveTo(Destination);
-		}
-	}
+    if ( IsLiveServerPawn(Pawn) )
+    {
+        if ( Character(Pawn) != None && !Character(Pawn).bIsDead )
+        {
+            if ( Destination != vect(0,0,0) && Destination != Pawn.Location )
+            {
+                Character(Pawn).CHAR_PlayWalking();
+                if ( IsLiveServerPawn(Pawn) )
+                    MoveTo(Destination);
+            }
+        }
+    }
 }
 
 defaultproperties

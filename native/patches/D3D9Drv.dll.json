@@ -1,0 +1,261 @@
+{
+  "format": 1,
+  "path": "Bin/D3D9Drv.dll",
+  "source_size": 704000,
+  "source_sha256": "8bc77f4daf5bae237b1a6664a0a8748662aab3efd20029017bbcd3e0e0afb18a",
+  "target_size": 706048,
+  "target_sha256": "cd73d839d1af8e9b2bab674ef21f1a2ab60d526ea754132f16b31bc8444c310e",
+  "replacements": [
+    {
+      "offset": 294,
+      "before": "05",
+      "after": "0b"
+    },
+    {
+      "offset": 317,
+      "before": "02",
+      "after": "0a"
+    },
+    {
+      "offset": 324,
+      "before": "00",
+      "after": "0c"
+    },
+    {
+      "offset": 326,
+      "before": "00",
+      "after": "04"
+    },
+    {
+      "offset": 369,
+      "before": "2013",
+      "after": "7017"
+    },
+    {
+      "offset": 376,
+      "before": "682b",
+      "after": "d562"
+    },
+    {
+      "offset": 736,
+      "before": "00000000000000",
+      "after": "2e727374617473"
+    },
+    {
+      "offset": 744,
+      "before": "00",
+      "after": "ef"
+    },
+    {
+      "offset": 749,
+      "before": "0000",
+      "after": "2013"
+    },
+    {
+      "offset": 753,
+      "before": "00",
+      "after": "02"
+    },
+    {
+      "offset": 757,
+      "before": "0000",
+      "after": "be0a"
+    },
+    {
+      "offset": 772,
+      "before": "00",
+      "after": "20"
+    },
+    {
+      "offset": 775,
+      "before": "0000000000000000",
+      "after": "602e6c6967687478"
+    },
+    {
+      "offset": 784,
+      "before": "0000",
+      "after": "d901"
+    },
+    {
+      "offset": 789,
+      "before": "0000",
+      "after": "3013"
+    },
+    {
+      "offset": 793,
+      "before": "00",
+      "after": "02"
+    },
+    {
+      "offset": 797,
+      "before": "0000",
+      "after": "c00a"
+    },
+    {
+      "offset": 812,
+      "before": "00",
+      "after": "20"
+    },
+    {
+      "offset": 815,
+      "before": "0000000000000000",
+      "after": "602e6c6967687464"
+    },
+    {
+      "offset": 824,
+      "before": "00",
+      "after": "0c"
+    },
+    {
+      "offset": 829,
+      "before": "0000",
+      "after": "4013"
+    },
+    {
+      "offset": 852,
+      "before": "00",
+      "after": "80"
+    },
+    {
+      "offset": 855,
+      "before": "00000000000000",
+      "after": "c02e6465636c78"
+    },
+    {
+      "offset": 864,
+      "before": "00",
+      "after": "7e"
+    },
+    {
+      "offset": 869,
+      "before": "0000",
+      "after": "5013"
+    },
+    {
+      "offset": 873,
+      "before": "00",
+      "after": "02"
+    },
+    {
+      "offset": 877,
+      "before": "0000",
+      "after": "c20a"
+    },
+    {
+      "offset": 892,
+      "before": "00",
+      "after": "20"
+    },
+    {
+      "offset": 895,
+      "before": "0000000000000000000000",
+      "after": "602e726573756e6c6b4001"
+    },
+    {
+      "offset": 909,
+      "before": "0000",
+      "after": "6013"
+    },
+    {
+      "offset": 913,
+      "before": "00",
+      "after": "02"
+    },
+    {
+      "offset": 917,
+      "before": "0000",
+      "after": "c40a"
+    },
+    {
+      "offset": 932,
+      "before": "00",
+      "after": "20"
+    },
+    {
+      "offset": 935,
+      "before": "0000000000000000",
+      "after": "602e726573696478"
+    },
+    {
+      "offset": 946,
+      "before": "00",
+      "after": "04"
+    },
+    {
+      "offset": 949,
+      "before": "0000",
+      "after": "7013"
+    },
+    {
+      "offset": 972,
+      "before": "00",
+      "after": "80"
+    },
+    {
+      "offset": 975,
+      "before": "00",
+      "after": "c0"
+    },
+    {
+      "offset": 58416,
+      "before": "538b9940040000",
+      "after": "e9cb5f12009090"
+    },
+    {
+      "offset": 61758,
+      "before": "8bbed400",
+      "after": "e9bd2212"
+    },
+    {
+      "offset": 61763,
+      "before": "00",
+      "after": "90"
+    },
+    {
+      "offset": 103584,
+      "before": "558bec6aff",
+      "after": "e90b911100"
+    },
+    {
+      "offset": 109024,
+      "before": "8b814847",
+      "after": "e94b7b11"
+    },
+    {
+      "offset": 109029,
+      "before": "00",
+      "after": "90"
+    },
+    {
+      "offset": 109047,
+      "before": "8b81cc00",
+      "after": "e9847b11"
+    },
+    {
+      "offset": 109052,
+      "before": "00ffd0",
+      "after": "909090"
+    },
+    {
+      "offset": 109945,
+      "before": "8b82d400",
+      "after": "e992a711"
+    },
+    {
+      "offset": 109950,
+      "before": "00",
+      "after": "90"
+    },
+    {
+      "offset": 112381,
+      "before": "8981d400",
+      "after": "e9de9d11"
+    },
+    {
+      "offset": 112386,
+      "before": "00",
+      "after": "90"
+    }
+  ],
+  "append_zlib_base64": "eNrtlE1IVFEUx+84T3vaq7FmyCkkJF8g6MbewoaRmBGzgYQm0rEyPwZcSMoQ+R64mIzxOU6v46PZRC10F20KWhQU9MF8pEMgERZG9AUtYgZzUIy+KF/nXnNGd+0i8Cwev3v4n3PPu+eeO96dJmjtoblNFVYCatUenoRjlpEpdKr7iSX8EAHU+j/uW6vu69Q9OnaIMPdVunKVU9QZ1lAcpuJBD6oHGTUjBRh5kXoYtSCdZHQcycvoFFITo26kekY9SPsY9SJVMepH2s3oDJKNkYxUguSfgHN8pu/tvIH06AV6Mq1v5g2yYesNmkXh2H0Tkg9kUVC/8wND8BySkaJwTBbAWIpCgrLypRX6RZsjwMklWoBLNfE0+vmHsI+XPeoD/eZ2XMoH+uK90kybXl9VKBQRYp6Mguenc+xKv4UQxQ6880JPMdIWNVGgxnj1x66z7+dMDdJrpC7L5aT0JLK1oxOS7cnpVcP6uHu0vIgJC9oaXYrmVspSys3RKqRYys3KiZiSVE//pFRd5gcO5yNt+jWRStbFQ6Mo6Ed5h5uTizU3lyqgCjUo2ggUBAstNxbmzJbbC1qBFIuYOpNRauO5eamrtZI2n64Sl5V403eWDUN9LNBrv3Pl+oU8OByZ4ZGsEV1j/okMrHVBaBrlxrN83kuY15tPXG3QxKUY56Vxed1d1K2KZtnunH+iFT6dNjLTgezf3vSjEHLhIR5rpYdma9MaxVLnKPUoJ6T5cGyoqfqp1izaIVjrMj91DrmUBmkmbAxVwjvdzVW/Yv0VZpUa7K1gV/Y2YFudL4MZPNlSbIX9oDrV6EwHY12dHezc208kOIILKcZow/61+WBRH6bPYzyLo2CXFuNZLvTROE9IGwRFQRO+ao1fOSgJP5F3QDyeFiT8cHupQBNSWkuK6+rERubmlb4SPCaFKaqdWtXikzBJtzP/ctQpm+EIh/k4R61cqV+km8O28IxshQQYzll5s+6xgwme4YQuonpLahONTB1i18VRq1SAz67RgDJI0E0SuYJaJonWPIkVdeRK0kI0f35q5rvZ1JzBqcH7WQEtYnn6G04Pztdnf9aYzivL/GuV5ai0p3cbTBk4jsoV+9/7/xuIGrmV"
+}

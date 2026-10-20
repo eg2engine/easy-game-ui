@@ -106,7 +106,8 @@ event Destroyed()
 {
 	local int i;
 
-	Super.Destroyed();
+	class'ObjectStore.FlightPoseWorker'.static.Unbind(Self);
+    Super(Character).Destroyed();
 	for ( i = 0;i < ArrayCount(Attachments);i++ )
 		if ( Attachments[i] != None && !Attachments[i].bDeleteMe )
 			Attachments[i].Destroy();
@@ -197,6 +198,38 @@ simulated function AnimateWalking()
 
 simulated function AnimateJumping()
 {
+    local ClientController CC;
+    local RoundSkill R;
+    local name CurrentSequence;
+    local float CurrentFrame,CurrentRate;
+    CC=ClientController(Controller);
+    // Preserve only the active local command-bow clip. This function is the
+    // pose notification; DoJump and movement physics still execute normally.
+    if (PrePivot.Z==Default.PrePivot.Z+200 && CC!=None
+        && !CC.IsRemotePlayerPawn() && CC.IsInState('CommandMelee')
+        && CC.PSI!=None && CC.PSI.JobName=='Bow' && CC.PSI.bIsAlive
+        && !bIsDead && !CC.PSI.CheckBuffDontAct())
+    {
+        R=RoundSkill(CC.ThisSkill);
+        if (R!=None && R.Active && R.CommandRound && R.Driver==CC
+            && R.ActionID>0 && R.Channel==0)
+        {
+            GetAnimParams(0,CurrentSequence,CurrentFrame,CurrentRate);
+            if (CurrentSequence=='Shot' || CurrentSequence=='ShotC') return;
+        }
+    }
+
+    if (ClientController(Controller)!=None && ClientController(Controller).IsRemotePlayerPawn())
+    {
+        if (Acceleration.X==0 && Acceleration.Y==0)
+            CHAR_PlayAnim(BasicAnim[3],AnimSpeed,0.3,0);
+        else CHAR_PlayAnim(BasicAnim[3],AnimSpeed,0,0);
+        return;
+    }
+
+
+
+
 	if ( Acceleration.X == 0 && Acceleration.Y == 0 )
 		PlayAnim(BasicAnim[3],AnimSpeed,0.3);
 	else
@@ -533,14 +566,36 @@ function CHAR_TweenAnim(name Sequence, float Time, optional int Channel)
 //////////////////////////
 
 function ChangeAnimation()
-{
-	// 2003.6.24 by BK
-	local float AnimFrame, AnimRate;
+{	local float AnimFrame, AnimRate;
 	local name AnimSeq;
+
+    local name BerserkerSequence;
+    local float BerserkerFrame, BerserkerRate;
+    if (Controller != None && Controller.IsInState('CommandMelee'))
+        return;
+
+    // Preserve the current channel during passive-buff animation refresh.
+    if ( !bIsDead && ClientController(Controller) != None
+        && ClientController(Controller).PSI != None
+        && ClientController(Controller).PSI.IsEnchantBuff("Berserker")
+        && !ClientController(Controller).PSI.CheckBuffDontAct() )
+    {
+        GetAnimParams(0, BerserkerSequence, BerserkerFrame, BerserkerRate);
+        if ( BerserkerSequence != '' && HasAnim(BerserkerSequence)
+            && (IsAnimating(0) || PrePivot.Z == Default.PrePivot.Z + 200) )
+        {
+            ;
+            return;
+        }
+    }
+
+	// 2003.6.24 by BK
+
+
 	GetAnimParams(0,AnimSeq, AnimFrame, AnimRate);
 
 	if ( Controller == None || (!ClientController(Controller).IsInState('Attacking') && !IsSocialAnim(AnimSeq)) )
-		Super.ChangeAnimation();
+		Super(Character).ChangeAnimation();
 }
 
 function Arm()

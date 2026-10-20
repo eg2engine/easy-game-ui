@@ -13,8 +13,8 @@ var byte StartAlpha;
 function OnInit()
 {
 	StartTime = PlayerOwner.Level.TimeSeconds;
-	BgMaterial = new(none) class'ConstantColor';
-	BgBlend = new(none) class'FinalBlend';
+	if (BgMaterial == None) BgMaterial = new(Self) class'ObjectStore.OwnedConstant';
+	if (BgBlend == None) BgBlend = new(Self) class'ObjectStore.OwnedBlend';
 
 	BgBlend.Material = BgMaterial;
 	BgBlend.FrameBufferBlending = BgBlend.EFrameBufferBlending.FB_AlphaBlend;
@@ -22,31 +22,13 @@ function OnInit()
 
 function OnFlush()
 {
-	if(BgMaterial != None)
-	{
-		DynamicUnloadObject(BgMaterial);
-		BgMaterial = None;
-	}
-	if(BgBlend != None)
-	{
-		DynamicUnloadObject(BgBlend);
-		BgBlend = None;
-	}
+    class'ObjectStore.UILifetime'.static.ReleasePair(BgBlend,BgMaterial,Self);
 }
 
 event Destroyed()
 {
-	Super.Destroyed();
-	if(BgMaterial != None)
-	{
-		DynamicUnloadObject(BgMaterial);
-		BgMaterial = None;
-	}
-	if(BgBlend != None)
-	{
-		DynamicUnloadObject(BgBlend);
-		BgBlend = None;
-	}
+    class'ObjectStore.UILifetime'.static.ReleasePair(BgBlend,BgMaterial,Self);
+    Super(CMultiInterface).Destroyed();
 }
 
 function SetScreenEffect(byte R, byte G, byte B, byte A, optional int Count, optional float Time, optional byte Range)

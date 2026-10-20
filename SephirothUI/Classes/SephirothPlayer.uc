@@ -111,8 +111,130 @@ function UpdateFreezingControlLock()
 
 function PlayerTick(float DeltaTime)
 {
-	UpdateFreezingControlLock();
-	Super.PlayerTick(DeltaTime);
+    local Character FlightCharacter;
+    local name CurrentSequence, AirSequence;
+    local float CurrentFrame, CurrentRate;
+    local bool bDedicatedFlight, bAnimating;
+
+
+
+
+
+
+
+    if ( Pawn != None && !Pawn.bDeleteMe
+        && Pawn.PrePivot.Z == Pawn.Default.PrePivot.Z + 200 )
+        aUp = 0;
+    UpdateFreezingControlLock();
+    if ( !IsInState('PlayerFlying') )
+    {
+        if ( bCheatFlying )
+        {
+            bCheatFlying = False;
+            aUp = 0;
+            if ( Pawn != None && !Pawn.bDeleteMe && Pawn.Physics == PHYS_Flying )
+            {
+                Pawn.Acceleration = vect(0,0,0);
+                Pawn.Velocity = vect(0,0,0);
+                Pawn.SetPhysics(PHYS_Falling);
+            }
+        }
+    }
+    Super(ClientController).PlayerTick(DeltaTime);
+
+    if ( Pawn == None || Pawn.bDeleteMe )
+        return;
+    FlightCharacter = Character(Pawn);
+    if ( FlightCharacter == None )
+        return;
+    if ( FlightCharacter.bIsDead || IsInState('JustDead') )
+    {
+        Pawn.PrePivot.Z = Pawn.Default.PrePivot.Z;
+        return;
+    }
+    if ( Pawn.PrePivot.Z != Pawn.Default.PrePivot.Z + 200 )
+        return;
+    // A real jump must finish and notify weapon/skill preparation naturally.
+    if ( Pawn.Physics == PHYS_Falling )
+        return;
+    if ( !IsInState('Navigating') && !IsInState('Approaching')
+        && !IsInState('Attacking') && !IsInState('MeleeAttacking')
+        && !IsInState('RangeAttacking') && !IsInState('SecondSkillAttacking')
+        && !IsInState('Picking') && !IsInState('Talking') && !IsInState('Tracing')
+        && !IsInState('SummonSpirit') )
+        return;
+
+    // Combat states own weapon preparation, action steps and completion.
+    // Never inject a frozen flight pose into their animation channels.
+    if ( IsInState('Attacking') || IsInState('MeleeAttacking')
+        || IsInState('RangeAttacking') || IsInState('BowAttacking')
+        || IsInState('SecondSkillAttacking') || IsInState('EnchantSupport') )
+        return;
+
+    Pawn.GetAnimParams(0, CurrentSequence, CurrentFrame, CurrentRate);
+    bAnimating=Pawn.IsAnimating(0);
+    // Preserve the cast until AnimEnd closes its animation, independently of BUFF acknowledgement.
+    if ( IsInState('SummonSpirit') && CurrentSequence == 'Spirits' && bAnimating )
+        return;
+    // Preserve the complete hit reaction; this state has no Approaching.AnimEnd.
+    if ( FlightCharacter.bJustDamaged )
+    {
+        if ( bAnimating )
+            return;
+        if ( CurrentSequence == 'Pain' || CurrentSequence == 'PainS'
+            || CurrentSequence == 'Pain01' )
+            FlightCharacter.bJustDamaged = False;
+        else
+            return;
+    }
+    // Do not replace an active combat, social or other non-movement animation.
+    if ( bAnimating
+        && CurrentSequence != FlightCharacter.BasicAnim[0]
+        && CurrentSequence != FlightCharacter.BasicAnim[1]
+        && CurrentSequence != FlightCharacter.BasicAnim[2]
+        && CurrentSequence != FlightCharacter.BasicAnim[3]
+        && CurrentSequence != FlightCharacter.BasicAnim[4]
+        && CurrentSequence != 'Fly' && CurrentSequence != 'Flying'
+        && CurrentSequence != 'FlyIdle' && CurrentSequence != 'FlyForward'
+        // Spirits may retain an active animation flag after the buff state ends.
+        && CurrentSequence != 'Spirits' )
+        return;
+
+    if ( Pawn.Acceleration == vect(0,0,0) && Pawn.HasAnim('FlyIdle') )
+        AirSequence = 'FlyIdle';
+    else if ( Pawn.Acceleration != vect(0,0,0) && Pawn.HasAnim('FlyForward') )
+        AirSequence = 'FlyForward';
+    else if ( Pawn.HasAnim('Fly') )
+        AirSequence = 'Fly';
+    else if ( Pawn.HasAnim('Flying') )
+        AirSequence = 'Flying';
+    bDedicatedFlight = AirSequence != '';
+
+    if ( !bDedicatedFlight )
+    {
+        AirSequence = FlightCharacter.BasicAnim[3];
+        if ( AirSequence == '' || !Pawn.HasAnim(AirSequence) )
+        {
+            AirSequence = 'Jump';
+            if (!Pawn.HasAnim(AirSequence)) return;
+        }
+    }
+
+    if ( bDedicatedFlight )
+    {
+        if ( CurrentSequence != AirSequence || !bAnimating )
+        {
+            FlightCharacter.AnimSequence = AirSequence;
+            Pawn.LoopAnim(AirSequence,1.0,0.15,0);
+        }
+    }
+    else if ( CurrentSequence != AirSequence || CurrentRate != 0 )
+    {
+        // Existing jump midpoint is only an airborne pose, not a new flight clip.
+        FlightCharacter.AnimSequence = AirSequence;
+        Pawn.PlayAnim(AirSequence,1.0,0.15,0);
+        Pawn.FreezeAnimAt(0.45,0);
+    }
 }
 
 //@by wj(040113)------
@@ -556,6 +678,23 @@ event OpenCompoundMenu(array<int> Dealings)
 
 function FollowPlayer(Hero Player)
 {
+    local ClientController TargetController;
+    local string TargetName;
+    if ( Player == None || Player.bDeleteMe || Player == Pawn )
+        return;
+    TargetController = ClientController(Player.Controller);
+    if ( TargetController == None || TargetController.PSI == None )
+        return;
+    TargetName = string(TargetController.PSI.PlayName);
+    if ( PSI == None || !PSI.bParty || PartyMgr == None
+        || !PartyMgr.IsInParty(string(PSI.PlayName))
+        || !PartyMgr.IsInParty(TargetName) )
+    {
+        if ( myHud != None )
+            myHud.AddMessage(2,TargetName $ "没有加入队伍禁止跟随",class'Canvas'.Static.MakeColor(255,0,0));
+        return;
+    }
+
 	if ( Player != None && !Player.bDeleteMe ) 
 	{
 		bTracePlayer = True;
@@ -583,14 +722,14 @@ event NetRecv_PlayerOut(PlayerServerInfo PSI, Pawn Pawn)
 }
 
 event NetRecv_Disconnected(string Result)
-{
+{ class'BowAttackRuntime.DefinitionStore'.static.ClearAll();
 //	local string ResultMsg;
 	SephirothInterface(myHud).OnDisconnected();
 	//SephirothInterface(myHud).OnDisconnected(Result);
 }
 
 event NetRecv_DisconnectError(string Result)
-{
+{ class'BowAttackRuntime.DefinitionStore'.static.ClearAll();
 	SephirothInterface(myHud).OnDisconnected(Result);
 }
 
@@ -679,93 +818,83 @@ event NetRecv_MessageBox(int nType, int nResult)
  */
 event NetRecv_ActorOut(ServerInfo SI, Actor Actor)
 {
-	local NephilimPlayer CC;
-	local SephirothInterface Interface;
-	local SephirothController Controller;
-	local Hero HeroActor;
-	local Pawn PawnActor;
+    local NephilimPlayer CC;
+    local SephirothInterface Interface;
+    local SephirothController Controller;
+    local Hero HeroActor;
+    local Pawn PawnActor;
+    local Actor ControllerActor;
+    local Actor SpiritActor;
+    local SpiritType Spirit;
 
-	// 调用父类处理，执行基础清理工作
-	Super.NetRecv_ActorOut(SI, Actor);
+    // Do not require the departing Actor to remain live in order to unlink UI caches.
+    if (Actor != None && EnchantTarget == Actor) EnchantTarget=None;
+    if (class'SceneRegistry.LiveRegistry'.static.IsLiveActor(myHud,Level))
+    {
+        Interface=SephirothInterface(myHud);
+        if (Interface != None && class'SceneRegistry.LiveRegistry'.static.IsRegistered(Interface.Controller))
+        {
+            Controller=SephirothController(Interface.Controller);
+            if (Controller != None) Controller.OnActorOut(Actor);
+        }
+    }
 
-	// 第一步：基础参数验证
-	// 检查服务器信息和Actor是否有效，如果已标记删除则直接返回
-	// 这是防止崩溃的第一道防线
-	if ( SI == None || SI.bDeleteMe || Actor == None || Actor.bDeleteMe )
-		return;
+    Super(ClientController).NetRecv_ActorOut(SI, Actor);
+    // Do not require the departing Actor to remain live in order to unlink UI caches.
+    if (Actor != None && EnchantTarget == Actor) EnchantTarget=None;
+    if (class'SceneRegistry.LiveRegistry'.static.IsLiveActor(myHud,Level))
+    {
+        Interface=SephirothInterface(myHud);
+        if (Interface != None && class'SceneRegistry.LiveRegistry'.static.IsRegistered(Interface.Controller))
+        {
+            Controller=SephirothController(Interface.Controller);
+            if (Controller != None) Controller.OnActorOut(Actor);
+        }
+    }
 
-	// 第二步：检查UI接口是否有效
-	// myHud 是玩家界面的根对象，如果为None说明界面未初始化或已销毁
-	// 此时无法进行UI相关的清理操作，直接返回避免崩溃
-	if ( myHud == None )
-		return;
+    // The native parent can remove Actor before returning.
+    if (Actor != None && EnchantTarget == Actor) EnchantTarget=None;
+    if (!class'SceneRegistry.LiveRegistry'.static.IsLiveActor(Actor,Level)) return;
 
-	// 第三步：类型转换并验证Interface对象
-	// 将myHud转换为SephirothInterface类型，如果转换失败说明类型不匹配
-	// 必须验证转换结果，避免后续访问空指针
-	Interface = SephirothInterface(myHud);
-	if ( Interface == None )
-		return;
-
-	// 第四步：处理玩家移出事件
-	// 如果移出的是玩家角色，通知UI界面更新玩家列表
-	// 例如关闭该玩家的菜单界面、移除玩家信息显示等
-	// 注意：在类型转换和访问Actor之前，需要再次检查Actor是否仍然有效
-	// 因为Actor可能在检查之后、访问之前被标记为删除或进入销毁过程
-	if ( SI.IsA('PlayerServerInfo') && Actor != None && !Actor.bDeleteMe )
-	{
-		PawnActor = Pawn(Actor);
-		// 类型转换后再次检查，防止Actor在转换过程中被销毁
-		if ( PawnActor != None && !PawnActor.bDeleteMe )
-			Interface.OnPlayerOut(PlayerServerInfo(SI), PawnActor);
-	}
-
-	// 第五步：清理Controller中的Actor引用
-	// Controller可能持有该Actor的引用（如锁定目标、悬停目标等）
-	// 必须清理这些引用，防止Controller访问已销毁的Actor导致崩溃
-	// 在传递Actor给Controller之前，再次检查Actor是否仍然有效
-	Controller = SephirothController(Interface.Controller);
-	if ( Controller != None && Actor != None && !Actor.bDeleteMe )
-		Controller.OnActorOut(Actor);
-
-	// 第六步：处理Hero角色的特殊清理
-	// 如果移出的是Hero类型角色（玩家或NPC），需要清理SpiritType相关的引用
-	// SpiritType是精灵类型，可能持有AnimHost（动画宿主）引用
-	// 注意：在类型转换Hero(Actor)之前，必须确保Actor仍然有效
-	// 因为类型转换可能会触发Actor的状态检查，如果Actor正在被销毁会导致断言失败
-	if ( Actor == None || Actor.bDeleteMe )
-		return;
-	
-	HeroActor = Hero(Actor);
-	// 类型转换后立即检查Actor是否仍然有效，防止在转换过程中Actor被销毁
-	// 注意：类型转换Hero(Actor)可能会触发引擎的IsValid检查
-	// 如果Actor正在被销毁过程中，这个检查会失败并导致断言错误
-	// 因此必须在转换后立即验证Actor的有效性
-	if ( HeroActor != None && !HeroActor.bDeleteMe && HeroActor.Controller != None ) 
-	{
-		// 获取Hero的Controller并转换为NephilimPlayer类型
-		// 必须检查Controller是否存在，因为Hero可能已销毁但Controller引用仍存在
-		CC = NephilimPlayer(HeroActor.Controller);
-		if ( CC != None && !CC.bDeleteMe ) 
-		{
-			// 如果SpiritType存在且其AnimHost指向当前移出的Actor
-			// 需要清空AnimHost引用，防止SpiritType访问已销毁的Actor
-			// 这是防止崩溃的关键步骤之一
-			// 在访问SpiritType之前，再次检查Actor是否仍然有效
-			// 因为Actor可能在之前的处理过程中被标记为删除
-			if ( CC.SpiritType != None && Actor != None && !Actor.bDeleteMe && CC.SpiritType.AnimHost == Actor ) 
-			{
-				CC.SpiritType.AnimHost = None;
-			}
-		}
-	}
-
-	// 第七步：清理附魔目标引用
-	// 如果当前移出的Actor是玩家的附魔目标，清空附魔目标引用
-	// 防止后续技能释放时访问已销毁的Actor
-	// 在比较之前，确保Actor仍然有效（虽然此时Actor可能已经被标记为删除）
-	if ( Actor != None && Actor == EnchantTarget )
-		EnchantTarget = None;
+    HeroActor=Hero(Actor);
+    if (HeroActor != None)
+    {
+        ControllerActor=HeroActor.Controller;
+        if (class'SceneRegistry.LiveRegistry'.static.IsLiveActor(ControllerActor,Level))
+        {
+            CC=NephilimPlayer(ControllerActor);
+            if (CC != None)
+            {
+                SpiritActor=CC.SpiritType;
+                if (SpiritActor != None)
+                {
+                    if (!class'SceneRegistry.LiveRegistry'.static.IsLiveActor(SpiritActor,Level))
+                        CC.SpiritType=None;
+                    else
+                    {
+                        Spirit=SpiritType(SpiritActor);
+                        if (Spirit != None && Spirit.AnimHost == Actor) Spirit.AnimHost=None;
+                    }
+                }
+            }
+        }
+    }
+    if (!class'SceneRegistry.LiveRegistry'.static.IsLiveActor(myHud,Level)) return;
+    Interface=SephirothInterface(myHud);
+    if (Interface == None) return;
+    if (class'SceneRegistry.LiveRegistry'.static.IsLiveActor(SI,Level))
+    {
+        if (SI.IsA('PlayerServerInfo'))
+        {
+            PawnActor=Pawn(Actor);
+            if (PawnActor != None) Interface.OnPlayerOut(PlayerServerInfo(SI),PawnActor);
+        }
+    }
+    // UI callbacks may destroy either the HUD or its Interaction controller.
+    if (!class'SceneRegistry.LiveRegistry'.static.IsLiveActor(Interface,Level)) return;
+    if (!class'SceneRegistry.LiveRegistry'.static.IsRegistered(Interface.Controller)) return;
+    Controller=SephirothController(Interface.Controller);
+    if (Controller != None) Controller.OnActorOut(Actor);
 }
 
 function DereferenceActor(Actor actor)
@@ -1174,6 +1303,9 @@ event LostChild(Actor Lost)
 //@by wj(05/19)
 event PreMapChange()
 {
+
+    class'BowAttackRuntime.RoundStore'.static.Release(Self);
+ class'RemoteMotionSys.QueueIndex'.static.ClearAll();
 	if( myHud != None ) 
 	{
 		myHud.Destroy();
@@ -1193,6 +1325,20 @@ event OnRemoveInventoryItem(SephirothItem Item)
 
 event Damaged(Pawn Attacker, Skill Skill, bool bPain, bool bKnockback, bool bCritical, bool bMiss, bool bBlock, bool bImmune)
 {
+    local Character VisualCharacter;
+    if ( IsInState('Navigating') && !bPain && !bKnockback
+        && !bMiss && !bBlock && !bImmune && Pawn != None && !Pawn.bDeleteMe
+        && Pawn.PrePivot.Z == Pawn.Default.PrePivot.Z + 200 )
+    {
+        VisualCharacter = Character(Pawn);
+        if ( VisualCharacter != None && !VisualCharacter.bIsDead && Pawn.HasAnim('Pain') )
+        {
+            VisualCharacter.bJustDamaged = True;
+            VisualCharacter.AnimSequence = 'Pain';
+            Pawn.PlayAnim('Pain',1.0,0.1,0);
+        }
+    }
+
 	Super.Damaged(Attacker, Skill, bPain, bKnockback, bCritical, bMiss, bBlock, bImmune);
 	if ( Attacker != None )
 		ThisDamage.AttackerName = string(Attacker.Name);
@@ -1851,6 +1997,9 @@ event NetRecv_NotiExtendedCMD(string cmd)
 {
 	local SephirothInterface interface;
 
+    if (ParseFlightModeMessage(cmd)) return;
+
+
 	//Log("NetRecv_NotiExtendedCMD("@cmd@")");
 	if( cmd == "+-+-+-PICKUPFAIL" )
 	{
@@ -1859,6 +2008,143 @@ event NetRecv_NotiExtendedCMD(string cmd)
 	}
 
 
+}
+
+function bool ApplyFlightMode(Hero H, int Mode)
+{
+    local name Sequence;
+    local float Frame, Rate;
+    if (H == None || H.bDeleteMe || (Mode != 0 && Mode != 1))
+        return False;
+    if (Mode == 1)
+    {
+        if (H.bIsDead) return False;
+        H.PrePivot.Z = H.Default.PrePivot.Z + 200;
+    }
+    else
+    {
+        H.PrePivot.Z = H.Default.PrePivot.Z;
+        // Only restore a dedicated/frozen flight pose, never an active skill.
+        if (H != Pawn && !H.bIsDead && H.Physics != PHYS_Falling)
+        {
+            H.GetAnimParams(0, Sequence, Frame, Rate);
+            if (Sequence == 'Fly' || Sequence == 'Flying' || Sequence == 'FlyIdle'
+                || Sequence == 'FlyForward' || (Sequence == H.BasicAnim[3] && Rate == 0))
+                H.CHAR_PlayerWalkingAnim();
+        }
+    }
+    class'ObjectStore.FlightPoseWorker'.static.Bind(H,Self,Mode);
+    return True;
+}
+
+function bool NetRecv_FlightMode(int ActorPanID, int Mode)
+{
+    local GameManager GM;
+    local Hero H;
+    local ClientController CC;
+    local int i;
+    if (ActorPanID <= 0 || (Mode != 0 && Mode != 1)) return False;
+    H = Hero(Pawn);
+    if (H == None || H.bDeleteMe) return False;
+    CC = ClientController(H.Controller);
+    if (H != None && !H.bDeleteMe && CC != None && !CC.bDeleteMe
+        && CC.PSI != None && !CC.PSI.bDeleteMe && CC.PSI.PanID == ActorPanID)
+        return ApplyFlightMode(H, Mode);
+    GM = GameManager(Level.Game);
+    if (GM == None || GM.bDeleteMe) return False;
+    for (i = 0; i < GM.Heroes.Length; i++)
+    {
+        H = GM.Heroes[i];
+        if (H != None && !H.bDeleteMe)
+        {
+            CC = ClientController(H.Controller);
+            if (CC != None && !CC.bDeleteMe && CC.PSI != None
+                && !CC.PSI.bDeleteMe && CC.PSI.PanID == ActorPanID)
+                return ApplyFlightMode(H, Mode);
+        }
+    }
+    ;
+    return False;
+}
+
+function bool ParseFlightModeMessage(string Message)
+{
+    local string Payload, IdText, ModeText, Prefix;
+    local int Cut, i, Code, ActorPanID;
+    Prefix = "+-+-+-FLIGHTMODE|";
+    if (Left(Message, Len(Prefix)) != Prefix) return False;
+    Payload = Mid(Message, Len(Prefix));
+    Cut = InStr(Payload, "|");
+    if (Cut <= 0) return True;
+    IdText = Left(Payload, Cut);
+    ModeText = Mid(Payload, Cut + 1);
+    if (Len(IdText) > 10 || (ModeText != "0" && ModeText != "1")) return True;
+    for (i = 0; i < Len(IdText); i++)
+    {
+        Code = Asc(Mid(IdText, i, 1));
+        if (Code < 48 || Code > 57) return True;
+    }
+    ActorPanID = int(IdText);
+    if (ActorPanID <= 0 || string(ActorPanID) != IdText) return True;
+    NetRecv_FlightMode(ActorPanID, int(ModeText));
+    return True;
+}
+
+function UpdateRemoteFlightPose(Hero H)
+{
+    local name CurrentSequence, AirSequence;
+    local float Frame, Rate;
+    local bool Dedicated;
+    local ClientController CC;
+    if (H == None || H.bDeleteMe || H == Pawn || H.bIsDead
+        || H.PrePivot.Z != H.Default.PrePivot.Z + 200 || H.Physics == PHYS_Falling)
+        return;
+    CC = ClientController(H.Controller);
+    if (CC == None || CC.bDeleteMe || CC.PSI == None || CC.PSI.bDeleteMe
+        || CC.PSI.CheckBuffDontAct()) return;
+    if (CC.IsInState('Attacking') || CC.IsInState('MeleeAttacking')
+        || CC.IsInState('RangeAttacking') || CC.IsInState('BowAttacking')
+        || CC.IsInState('SecondSkillAttacking') || CC.IsInState('EnchantSupport')
+        || CC.IsInState('JustDead') || CC.IsInState('Stunning')
+        || CC.IsInState('Knockbacking')) return;
+    H.GetAnimParams(0, CurrentSequence, Frame, Rate);
+    if (H.bJustDamaged && H.IsAnimating(0)) return;
+    if (H.IsAnimating(0) && CurrentSequence != H.BasicAnim[0]
+        && CurrentSequence != H.BasicAnim[1] && CurrentSequence != H.BasicAnim[2]
+        && CurrentSequence != H.BasicAnim[3] && CurrentSequence != H.BasicAnim[4]
+        && CurrentSequence != 'Fly' && CurrentSequence != 'Flying'
+        && CurrentSequence != 'FlyIdle' && CurrentSequence != 'FlyForward') return;
+    if (H.Acceleration == vect(0,0,0) && H.HasAnim('FlyIdle')) AirSequence = 'FlyIdle';
+    else if (H.Acceleration != vect(0,0,0) && H.HasAnim('FlyForward')) AirSequence = 'FlyForward';
+    else if (H.HasAnim('Fly')) AirSequence = 'Fly';
+    else if (H.HasAnim('Flying')) AirSequence = 'Flying';
+    Dedicated = AirSequence != '';
+    if (!Dedicated) AirSequence = H.BasicAnim[3];
+    if (AirSequence == '' || !H.HasAnim(AirSequence)) return;
+    if (Dedicated)
+    {
+        if (CurrentSequence != AirSequence || !H.IsAnimating(0))
+        {
+            H.AnimSequence = AirSequence;
+            H.LoopAnim(AirSequence, 1, 0.15, 0);
+        }
+    }
+    else if (CurrentSequence != AirSequence || Rate != 0)
+    {
+        H.AnimSequence = AirSequence;
+        H.PlayAnim(AirSequence, 1, 0.15, 0);
+        H.FreezeAnimAt(0.45, 0);
+    }
+}
+
+function UpdateRemoteFlightModes()
+{
+    local GameManager GM;
+    local int i;
+    GM = GameManager(Level.Game);
+    if (GM == None || GM.bDeleteMe) return;
+    for (i = 0; i < GM.Heroes.Length; i++)
+        UpdateRemoteFlightPose(GM.Heroes[i]);
 }
 
 defaultproperties

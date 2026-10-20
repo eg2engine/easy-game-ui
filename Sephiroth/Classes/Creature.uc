@@ -564,16 +564,20 @@ function CreateStyle()
 	local int i;
 
 	PreCreateStyle();
+    if (ColorStyle.Length < Skins.Length) ColorStyle.Length=Skins.Length;
+    if (BlendStyle.Length < Skins.Length) BlendStyle.Length=Skins.Length;
 	for ( i = 0;i < Skins.Length;i++ ) 
 	{
 		if ( Skins[i] == None )
 			break;
-		if ( !bStyleCreated ) 
-		{
-			ColorStyle[i] = new(None) class'ColorModifier';
-			BlendStyle[i] = new(None) class'FinalBlend';
+		if (ColorStyle[i] == None) {
+			ColorStyle[i] = new(Self) class'ObjectStore.OwnedColor';
+        }
+        if (BlendStyle[i] == None) {
+			BlendStyle[i] = new(Self) class'ObjectStore.OwnedBlend';
 		}
-		BlendStyle[i].Material = Skins[i];
+		if (ColorStyle[i] == None || BlendStyle[i] == None) continue;
+        BlendStyle[i].Material = Skins[i];
 		BlendStyle[i].AlphaTest = True;
 		BlendStyle[i].FrameBufferBlending = BlendStyle[i].EFrameBufferBlending.FB_AlphaBlend;
 		ColorStyle[i].Material = BlendStyle[i];
@@ -586,6 +590,7 @@ function CreateStyle()
 
 event NetRecv_PatternInfo(Pattern sInfo)
 {
+    if (bDeleteMe || sInfo == None || PatternInfo == None) return;
 	// ���� �������� ������ �ִٸ� ��� �����Ѵ�.
 	if ( PatternInfo.strEffRes != "" )
 		StopPatternEffect(PatternInfo.strEffRes);
@@ -638,7 +643,8 @@ event NetRecv_PatternInfo(Pattern sInfo)
 	MsgController.nCount	= PatternInfo.nMsgRepeat;
 	MsgController.eState	= PS_WAITING;
 	
-	PlayerController(Controller).myHud.AddMessage(255, "Xelloss Test", class'Canvas'.Static.MakeColor(255, 255, 255));
+
+    if (IsA('Monster')) Enable('Tick');
 }
 
 

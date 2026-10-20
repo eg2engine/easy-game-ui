@@ -1,7 +1,7 @@
 // 维护蓝法粒子动画及结构保护，仅在所属武器 Link 允许时更新。
 class Designed_GlaciesStickB_Particles extends Emitter;
 
-// V16: silver-blue shaft, crystal crown, orbiting shards and slow frost rings.
+//    : silver-blue shaft, crystal crown, orbiting shards and slow frost rings.
 var float FrostPhase;
 var float ArcDelay;
 
@@ -42,7 +42,8 @@ simulated function bool ValidateStructure()
 // 每帧先检查所属对象的停止或生命周期状态，失效时不继续访问效果资源。
 simulated event Tick(float DeltaTime)
 {
-    local vector TailLocal, TailWorld;
+    local vector TailLocal, TailWorld, TailRotated;
+    local float TailDistance;
     local float TailSpeed, GlowPulse;
     local int I;
     local float Angle, Breath, Surge;
@@ -62,7 +63,7 @@ simulated event Tick(float DeltaTime)
     if (!ValidateStructure())
         return;
     FrostPhase += DeltaTime * 0.8;
-    // V38: one connected energy crown instead of orbiting head points.
+    //    : one connected energy crown instead of orbiting head points.
     Surge = FMax(Sin(FrostPhase * 0.7), 0.0);
     Surge = Surge * Surge * Surge;
     Emitters[2].StartSizeRange.X.Min = 19 + Surge * 4;
@@ -103,15 +104,20 @@ simulated event Tick(float DeltaTime)
     GlowPulse = 0.5 + 0.5 * Sin(TailTime * 1.5);
 
     TailLocal.X = 0; TailLocal.Y = 0; TailLocal.Z = -92;
-    TailWorld = Location + (TailLocal >> Rotation);
+    TailRotated = TailLocal >> Rotation;
+    TailWorld = Location + TailRotated;
     TailSpeed = 0;
-    if (bTailReady && DeltaTime > 0.001 && VSize(TailWorld - LastTail) < 180)
-        TailSpeed = FMin(VSize(TailWorld - LastTail) / DeltaTime / 420.0, 1.0);
+    if (bTailReady && DeltaTime > 0.001)
+    {
+        TailDistance = VSize(TailWorld - LastTail);
+        if (TailDistance < 180)
+            TailSpeed = FMin(TailDistance / DeltaTime / 420.0, 1.0);
+    }
     LastTail = TailWorld;
     bTailReady = True;
     TailMotion += (TailSpeed - TailMotion) * FMin(DeltaTime * 7, 1.0);
-    Emitters[23].StartLocationOffset = TailLocal >> Rotation;
-    Emitters[24].StartLocationOffset = TailLocal >> Rotation;
+    Emitters[23].StartLocationOffset = TailRotated;
+    Emitters[24].StartLocationOffset = TailRotated;
     Emitters[23].LifetimeRange.Min = 0.12 + TailMotion * 0.3;
     Emitters[23].LifetimeRange.Max = 0.18 + TailMotion * 0.4;
     Emitters[23].ColorScale[0].Color.A = byte(55 + TailMotion * 130);

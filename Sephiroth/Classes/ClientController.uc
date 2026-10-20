@@ -707,7 +707,7 @@ event OnItemAddAttrSelectOpen(string body);
  */
 function Landfloor(vector HitNormal)
 {
-	if( Pawn != None )
+	if( Pawn != None && !IsRemotePlayerPawn() )
 		Destination = Pawn.Location;
 }
 
@@ -756,20 +756,32 @@ function BiasCameraAbs(int amount)
  */
 function ZoomCamera(int zoom)
 {
-	local Rotator rot;
-
-	if ( ViewType != FirstPerson ) 
-	{
-		// 限制摄像机距离在最小和最大距离之间
-		CameraDist = clamp(ShakeFactor.OldOffset.Y + zoom, MinCameraDist, MaxCameraDist);
-		if( ViewType == QuaterView ) 
-		{
-			// 四分之三视角需要调整俯仰角
-			rot = Rotation;
-			rot.Pitch = -8192.0 * (CameraDist - MinCameraDist) / (MaxCameraDist - MinCameraDist);
-			SetRotation(rot);
-		}
-	}
+    local Rotator rot;
+    local int AngleDistance;
+    if (ViewType != FirstPerson)
+    {
+        if (ViewType == QuaterView && !bCameraShaking)
+        {
+            AngleDistance=Clamp(class'FreeviewSettings'.static.AutoDistanceForAngle(Rotation)+zoom,25,40);
+            rot=Rotation;
+            rot.Pitch=-8192.0*(AngleDistance-25)/15;
+            SetRotation(rot);
+            class'FreeviewSettings'.static.SaveAngle(rot);
+            return;
+        }
+        if (bCameraShaking)
+            CameraDist=Clamp(ShakeFactor.OldOffset.Y+zoom,MinCameraDist,MaxCameraDist);
+        else
+            CameraDist=Clamp(CameraDist+zoom,MinCameraDist,MaxCameraDist);
+        if (ViewType == BehindFree && !bCameraShaking)
+            class'FreeviewSettings'.static.SaveDistance(CameraDist);
+        if (ViewType == QuaterView)
+        {
+            rot=Rotation;
+            rot.Pitch=-8192.0*(CameraDist-MinCameraDist)/(MaxCameraDist-MinCameraDist);
+            SetRotation(rot);
+        }
+    }
 }
 
 /**
@@ -857,7 +869,20 @@ function bool CheckInterface(string InterfaceName);
  */
 function AddActionPool(string SkillName, character Target, vector TargetLoc, float Speed, int CC)
 {
+    local name PrioritySequence;
+    local float PriorityFrame,PriorityRate;
+
 	local ActionEntry A;
+    // Ordinary actions are discarded, never buffered. Movement is independent.
+    if (IsRemotePlayerPawn() && IsInState('SecondSkillAttacking')) return;
+    if (IsRemotePlayerPawn() && Pawn!=None && PSI!=None && PSI.JobName=='Bow')
+    {
+        Pawn.GetAnimParams(0,PrioritySequence,PriorityFrame,PriorityRate);
+        // A self-support cast may have received its BUFF acknowledgement before
+        // its one-shot character animation ends. Do not cut that animation short.
+        if (PrioritySequence=='Spirits' && Pawn.IsAnimating(0)) return;
+    }
+
 	A.SkillName = SkillName;
 	A.Target = Target;
 	A.TargetLocation = TargetLoc;
@@ -872,9 +897,22 @@ function AddActionPool(string SkillName, character Target, vector TargetLoc, flo
  */
 function UpdateActionPool()
 {
+    local name PrioritySequence;
+    local float PriorityFrame,PriorityRate;
+
 	local int i;
 	local Skill Skill;
 	local float AttackSpeed;
+    // Ordinary actions are discarded, never buffered. Movement is independent.
+    if (IsRemotePlayerPawn() && IsInState('SecondSkillAttacking')) return;
+    if (IsRemotePlayerPawn() && Pawn!=None && PSI!=None && PSI.JobName=='Bow')
+    {
+        Pawn.GetAnimParams(0,PrioritySequence,PriorityFrame,PriorityRate);
+        // A self-support cast may have received its BUFF acknowledgement before
+        // its one-shot character animation ends. Do not cut that animation short.
+        if (PrioritySequence=='Spirits' && Pawn.IsAnimating(0)) return;
+    }
+
 
 	if ( ActionPool.Length > 0 ) 
 	{
@@ -1071,6 +1109,12 @@ function PlaySocialAnim(name AnimName, float Rate, float TweenTime)
  */
 function PlayerAnimation(name AnimName, float Rate, float TweenTime)
 {
+    if (AnimName == 'Berserker')
+    {
+        ;
+        return;
+    }
+
 	if ( Pawn != None )
 		Pawn.PlayAnim(AnimName, Rate, TweenTime);
 	// 通知服务器播放单人动作
@@ -1091,6 +1135,34 @@ state Approaching extends PlayerWalking
 	{
 		local name AnimName;
 		local float AnimFrame, AnimRate;
+
+    local name CompletedSequence;
+    local float CompletedFrame, CompletedRate;
+    if (class'BowAttackRuntime.RoundStore'.static.FinishSupport(Self,Channel))
+    {
+        Pawn.SetActionStage(STAGE_End);
+        Pawn.StopAnimating();
+        GotoState('Navigating');
+        Character(Pawn).CHAR_PlayerWalkingAnim();
+        return;
+    }
+    if ( Channel == 0 && Pawn != None && !Pawn.bDeleteMe
+        && Pawn.PrePivot.Z == Pawn.Default.PrePivot.Z + 200
+        && Character(Pawn) != None && !Character(Pawn).bIsDead )
+    {
+        Pawn.GetAnimParams(Channel, CompletedSequence, CompletedFrame, CompletedRate);
+        if ( CompletedSequence == 'Spirits'
+            || ( IsInState('SecondSkillAttacking') && SecondSkill != None
+                && CompletedSequence == SecondSkill.AnimSequence ) )
+        {
+            // Close the native action loop only after its base-channel end callback.
+            // Keep the existing buff acknowledgement and transformation state transitions.
+            Pawn.SetActionStage(STAGE_End);
+            Pawn.StopAnimating();
+        }
+    }
+
+
 
 		if (PSI != None && PSI.bIsAlive) 
 		{
@@ -1129,11 +1201,13 @@ state Approaching extends PlayerWalking
 		if(PSI != None && PSI.CheckBuffDontAct() && !IsRemotePlayerPawn())
 			return ;
 
+        if (IsRemotePlayerPawn()) return;
 		OldAccel = Pawn.Acceleration;
 		// 判断是否在转向（旋转速度超过阈值）
 		bIsTurning = (Abs(DeltaRot.Yaw / DeltaTime) > 5000);
 		bTurningLeft = (DeltaRot.Yaw < 0);
 		Super.ProcessMove(DeltaTime,NewAccel,DoubleClickMove,DeltaRot);
+        if (IsRemotePlayerPawn() && (IsInState('MeleeAttacking') || IsInState('BowAttacking') || IsInState('RangeAttacking')) && ThisSkill != None) return;
 		if (PSI != None && PSI.bIsAlive) 
 		{
 			Pawn.GetAnimParams(0,AnimSeq, AnimFrame, AnimRate);
@@ -1166,6 +1240,7 @@ state Approaching extends PlayerWalking
 		local vector DestDiff;
 		local float DestDistance;
 		local vector NewLocation;
+        local MoveQueue Queue;
 	    
 		// 如果Buff禁止行动，直接返回
 		if(PSI != None && PSI.CheckBuffDontAct() && !IsRemotePlayerPawn())
@@ -1178,98 +1253,36 @@ state Approaching extends PlayerWalking
 		if(PetController != None && PSI != None && PSI.bIsAlive)	
 			PetController.MovePet(Destination);
 		// 如果不是玩家角色，处理动画和位置同步
-		if (PSI != None && !Character(Pawn).IsAvatar() && PSI.bIsAlive) 
-		{
-			// 检查位置同步状态
-			if ( bSyncingPosition && Pawn != None )
-			{
-				// 计算当前位置与目标位置的2D距离
-				vecTarget = Destination - Pawn.Location;
-				vecTarget.Z = 0;
-				DistToTarget = VSize(vecTarget);
-				
-				// 如果接近目标位置，恢复正常速度
-				if ( DistToTarget < SyncCloseDistance && OriginalGroundSpeed > 0 )
-				{
-					Pawn.GroundSpeed = OriginalGroundSpeed;
-					bSyncingPosition = False;
-					OriginalGroundSpeed = 0;  // 重置，下次需要时重新保存
-				}
-			}
-			
-			// 卡地形检测和立即同步
-			if ( Pawn != None )
-			{
-				// 初始化阈值（如果未设置）
-				if ( StuckThreshold == 0 )
-					StuckThreshold = 50.0;
-				if ( StuckTimeLimit == 0 )
-					StuckTimeLimit = 0.3;
-				
-				// 计算从上次同步位置移动的距离
-				vDiff = Pawn.Location - LastSyncLocation;
-				vDiff.Z = 0;  // 只考虑2D距离
-				DistanceMoved = VSize(vDiff);
-				
-				// 如果位置变化很小，但还在尝试移动（有加速度或Destination很远），可能卡住了
-				if ( DistanceMoved < StuckThreshold )
-				{
-					DestDiff = Destination - Pawn.Location;
-					DestDiff.Z = 0;
-					DestDistance = VSize(DestDiff);
-					
-					// 如果目标距离较远但位置几乎没变，说明卡住了
-					if ( DestDistance > 500.0 )
-					{
-						StuckCheckTime += DeltaTime;
-					
-						// 如果卡住时间超过限制，强制同步到服务器位置
-						if ( StuckCheckTime >= StuckTimeLimit )
-						{
-							//DebugLog("PlayerMove StuckCheckTime >= StuckTimeLimit:  "$StuckCheckTime);
-							NewLocation = Destination;
-							NewLocation.Z = Pawn.Location.Z + 100;  // 保持Z轴
-							Pawn.SetLocation(NewLocation);
-							//DebugLog("PlayerMove NewLocation: "$NewLocation);
-							// 重置检测
-							LastSyncLocation = Pawn.Location;
-							StuckCheckTime = 0;
-							bSyncingPosition = False;  // 停止加速同步
-							if ( OriginalGroundSpeed > 0 )
-							{
-								Pawn.GroundSpeed = OriginalGroundSpeed;
-								OriginalGroundSpeed = 0;
-							}
-						}
-					}
-					else
-					{
-						// 目标很近，重置卡住检测
-						StuckCheckTime = 0;
-					}
-				}
-				else
-				{
-					// 位置有明显变化，重置卡住检测
-					StuckCheckTime = 0;
-					LastSyncLocation = Pawn.Location;
-				}
-			}
-			
-			// 如果正在远程攻击或弓箭攻击且有加速度（正在移动），强制切换到行走动画
-			if (Hero(Pawn).IsBasicAnim(AnimSeq))
-			{
-				Character(Pawn).CHAR_CheckWalkAnim(Pawn.Acceleration,False,False);
-			}
-			else if (TargetLocked() && !CanStop(VSize(LockedTarget.Location - Pawn.Location)))
-			{
-				if(IsInState('SecondSkillAttacking')) 
-					return;
-
-				Character(Pawn).CHAR_CheckWalkAnim(Pawn.Acceleration,False,False);
-			}
-			return;
-		}
+        if (IsRemotePlayerPawn())
+        {
+            if (!class'SceneRegistry.LiveRegistry'.static.IsLiveActor(Pawn,Level)) return;
+            if (PSI==None || PSI.bDeleteMe) return;
+            Queue=class'RemoteMotionSys.QueueIndex'.static.Get(Self,PSI.PanID,False);
+            if (!PSI.bIsAlive || Character(Pawn).bIsDead || IsRemoteHardControlActive()
+                || IsInState('Knockbacking') || IsInState('Stunning')
+                || IsInState('Freezing') || IsInState('JustDead'))
+            {
+                if (Queue!=None) Queue.Reset();
+                Pawn.Acceleration=vect(0,0,0);
+                Pawn.Velocity.X=0; Pawn.Velocity.Y=0;
+                bSyncingPosition=False; bMouseMove=False;
+                return;
+            }
+            if (IsRemoteSkillDashLockActive())
+            {
+                if (Queue!=None) Queue.Reset();
+                return;
+            }
+            if (Queue!=None)
+            {
+                // Global PlayerTick commits remote movement once after state work.
+                bSyncingPosition=Queue.Moving;
+                bMouseMove=bSyncingPosition;
+            }
+            if (Hero(Pawn).IsBasicAnim(AnimSeq))
+                Character(Pawn).CHAR_CheckWalkAnim(Pawn.Acceleration,False,False);
+            return;
+        }
 
 		// 调整玩家速度
 		if (Hero(Pawn) != None && PSI != None && !bGodMode)
@@ -1282,11 +1295,12 @@ state Approaching extends PlayerWalking
 		// 检查是否到达交互目标
 		vecTarget = Destination - Pawn.Location;
 		vecTarget.Z = 0;
-		if (InteractTo != None && CanStop(VSize(vecTarget))) 
+		if ((InteractTo != None || (IsInState('Navigating') && bMouseMove)) && CanStop(VSize(vecTarget)))
 		{
 			// 到达目标，执行目标动作
 			Destination = Pawn.Location;
 			AchieveGoal();
+            bMouseMove = False;
 			Stopped();
 			InteractTo = None;
 		}
@@ -1475,8 +1489,21 @@ function TweenToFinish();	// 过渡到完成状态
  */
 function bool PlayAction(Skill Skill,float GivenSpeed,optional float TweenTime)
 {
+    local name PrioritySequence;
+    local float PriorityFrame,PriorityRate;
+
 	local float Speed, Delay;
 	local int ActionStep;
+    // Ordinary actions are discarded, never buffered. Movement is independent.
+    if (IsRemotePlayerPawn() && IsInState('SecondSkillAttacking')) return False;
+    if (IsRemotePlayerPawn() && Pawn!=None && PSI!=None && PSI.JobName=='Bow')
+    {
+        Pawn.GetAnimParams(0,PrioritySequence,PriorityFrame,PriorityRate);
+        // A self-support cast may have received its BUFF acknowledgement before
+        // its one-shot character animation ends. Do not cut that animation short.
+        if (PrioritySequence=='Spirits' && Pawn.IsAnimating(0)) return False;
+    }
+
 
 	bIsActing = True;
 
@@ -1584,7 +1611,7 @@ event Damaged(Pawn Attacker, Skill Skill, bool bPain, bool bKnockback, bool bCri
 			{
 				Pain();
 				// 如果不在攻击状态，播放疼痛动画
-				if ( !IsInState('Attacking') )
+				if ( !IsInState('Attacking') && !IsInState('CommandMelee') )
 					Hero(Pawn).PlayPain();
 				// 如果不是暴击，生成疼痛特效
 				if ( !bCritical )
@@ -1739,9 +1766,53 @@ Attack:
  */
 function NetRecv_StartCombo(Skill Skill,int CC,float Speed)
 {
-	GotoState('MeleeAttacking');
+    local Pawn MotionPawn;
+    local vector MotionVelocity,MotionAcceleration;
+    local float MotionDesired,MotionGround;
+    local vector MotionDestination;
+    local bool MotionMouse,MotionSync;
+    local Actor.EPhysics MotionPhysics;
+    local bool KeepMotion;
+
+    local name PrioritySequence;
+    local float PriorityFrame,PriorityRate;
+    // Ordinary actions are discarded, never buffered. Movement is independent.
+    if (IsRemotePlayerPawn() && PSI!=None && !class'RemoteMotionSys.QueueIndex'.static.AllowAction(Self,PSI.PanID,1)) return;
+    if (IsRemotePlayerPawn() && Pawn!=None && PSI!=None && PSI.JobName=='Bow')
+    {
+        Pawn.GetAnimParams(0,PrioritySequence,PriorityFrame,PriorityRate);
+        // A self-support cast may have received its BUFF acknowledgement before
+        // its one-shot character animation ends. Do not cut that animation short.
+        if (PrioritySequence=='Spirits' && Pawn.IsAnimating(0)) return;
+    }
+
+
+    KeepMotion=IsRemotePlayerPawn() && Pawn!=None && !Pawn.bDeleteMe
+        && PSI!=None && PSI.bIsAlive && !Character(Pawn).bIsDead
+        && !IsRemoteHardControlActive() && !IsRemoteSkillDashLockActive();
+    if (KeepMotion)
+    {
+        MotionPawn=Pawn; MotionVelocity=Pawn.Velocity;
+        MotionAcceleration=Pawn.Acceleration; MotionPhysics=Pawn.Physics;
+        MotionDesired=Pawn.DesiredSpeed; MotionGround=Pawn.GroundSpeed;
+        MotionDestination=Destination; MotionMouse=bMouseMove; MotionSync=bSyncingPosition;
+        Pawn.bCanStrafe=True;
+    }
+    // Successive received combo parts own a pose, not a movement restart.
+    if (!KeepMotion || !IsInState('MeleeAttacking')) GotoState('MeleeAttacking');
 	ComboCount = CC;
 	PlayAction(Skill,Speed,0);
+    if (IsRemotePlayerPawn() && PSI!=None && Skill!=None) class'RemoteMotionSys.QueueIndex'.static.NoteAction(Self,PSI.PanID,1,Skill.AnimSequence);
+    if (KeepMotion && Pawn==MotionPawn && !Pawn.bDeleteMe
+        && Pawn.Physics==MotionPhysics && IsInState('MeleeAttacking')
+        && PSI!=None && PSI.bIsAlive && !Character(Pawn).bIsDead
+        && !IsRemoteHardControlActive() && !IsRemoteSkillDashLockActive())
+    {
+        Pawn.Velocity.X=MotionVelocity.X; Pawn.Velocity.Y=MotionVelocity.Y;
+        Pawn.Acceleration.X=MotionAcceleration.X; Pawn.Acceleration.Y=MotionAcceleration.Y;
+        Pawn.DesiredSpeed=MotionDesired; Pawn.GroundSpeed=MotionGround;
+        Destination=MotionDestination; bMouseMove=MotionMouse; bSyncingPosition=MotionSync;
+    }
 }
 
 /**
@@ -1751,8 +1822,52 @@ function NetRecv_StartCombo(Skill Skill,int CC,float Speed)
  */
 function NetRecv_StartFinish(Skill Skill,float Speed)
 {
-	GotoState('MeleeAttacking');
+    local Pawn MotionPawn;
+    local vector MotionVelocity,MotionAcceleration;
+    local float MotionDesired,MotionGround;
+    local vector MotionDestination;
+    local bool MotionMouse,MotionSync;
+    local Actor.EPhysics MotionPhysics;
+    local bool KeepMotion;
+
+    local name PrioritySequence;
+    local float PriorityFrame,PriorityRate;
+    // Ordinary actions are discarded, never buffered. Movement is independent.
+    if (IsRemotePlayerPawn() && PSI!=None && !class'RemoteMotionSys.QueueIndex'.static.AllowAction(Self,PSI.PanID,1)) return;
+    if (IsRemotePlayerPawn() && Pawn!=None && PSI!=None && PSI.JobName=='Bow')
+    {
+        Pawn.GetAnimParams(0,PrioritySequence,PriorityFrame,PriorityRate);
+        // A self-support cast may have received its BUFF acknowledgement before
+        // its one-shot character animation ends. Do not cut that animation short.
+        if (PrioritySequence=='Spirits' && Pawn.IsAnimating(0)) return;
+    }
+
+
+    KeepMotion=IsRemotePlayerPawn() && Pawn!=None && !Pawn.bDeleteMe
+        && PSI!=None && PSI.bIsAlive && !Character(Pawn).bIsDead
+        && !IsRemoteHardControlActive() && !IsRemoteSkillDashLockActive();
+    if (KeepMotion)
+    {
+        MotionPawn=Pawn; MotionVelocity=Pawn.Velocity;
+        MotionAcceleration=Pawn.Acceleration; MotionPhysics=Pawn.Physics;
+        MotionDesired=Pawn.DesiredSpeed; MotionGround=Pawn.GroundSpeed;
+        MotionDestination=Destination; MotionMouse=bMouseMove; MotionSync=bSyncingPosition;
+        Pawn.bCanStrafe=True;
+    }
+    // Successive received combo parts own a pose, not a movement restart.
+    if (!KeepMotion || !IsInState('MeleeAttacking')) GotoState('MeleeAttacking');
 	PlayAction(Skill,Speed,0);
+    if (IsRemotePlayerPawn() && PSI!=None && Skill!=None) class'RemoteMotionSys.QueueIndex'.static.NoteAction(Self,PSI.PanID,1,Skill.AnimSequence);
+    if (KeepMotion && Pawn==MotionPawn && !Pawn.bDeleteMe
+        && Pawn.Physics==MotionPhysics && IsInState('MeleeAttacking')
+        && PSI!=None && PSI.bIsAlive && !Character(Pawn).bIsDead
+        && !IsRemoteHardControlActive() && !IsRemoteSkillDashLockActive())
+    {
+        Pawn.Velocity.X=MotionVelocity.X; Pawn.Velocity.Y=MotionVelocity.Y;
+        Pawn.Acceleration.X=MotionAcceleration.X; Pawn.Acceleration.Y=MotionAcceleration.Y;
+        Pawn.DesiredSpeed=MotionDesired; Pawn.GroundSpeed=MotionGround;
+        Destination=MotionDestination; bMouseMove=MotionMouse; bSyncingPosition=MotionSync;
+    }
 }
 
 function PlanNextAction();	// 计划下一个动作
@@ -2143,7 +2258,10 @@ state MeleeAttacking extends Attacking
 	 */
 	function BeginState()
 	{
-		Super.BeginState();
+		// A received remote melee animation is not a request to restart
+        // walking physics, crouch setup, or the movement state.
+        if (!IsRemotePlayerPawn())
+            Super.BeginState();
 		// 如果未装备武器，装备武器
 		if (!PSI.ArmState)
 			ToggleArmState();	
@@ -2327,6 +2445,31 @@ state MeleeAttacking extends Attacking
 	 */
 	function AnimEnd(int Channel)
 	{
+    local name EndSequence;
+    local float EndFrame,EndRate;
+    if (IsRemotePlayerPawn())
+    {
+        if (Channel!=0 || Pawn==None || Pawn.bDeleteMe || Hero(Pawn)==None) return;
+        if (Character(Pawn).bIsDead || IsRemoteHardControlActive()) return;
+        Pawn.GetAnimParams(0,EndSequence,EndFrame,EndRate);
+        if (EndFrame<0) return;
+        if (ThisSkill!=None)
+        {
+            if (EndSequence!=ThisSkill.AnimSequence) return;
+        }
+        else
+        {
+            // A completed orphan attack still owns a real end callback. Never
+            // convert an active replacement clip or basic/support pose to idle.
+            if (Pawn.IsAnimating(0) || Hero(Pawn).IsBasicAnim(EndSequence)
+                || EndSequence=='Spirits') return;
+        }
+        if (Pawn.IsAnimating(0)) return;
+        AnimStep(Channel);
+        return;
+    }
+
+
 		if (Character(Pawn).IsAvatar()) 
 		{
 			Super.AnimEnd(Channel);
@@ -2377,6 +2520,30 @@ state MeleeAttacking extends Attacking
 	 */
 	function AnimStep(int Channel)
 	{
+    local name EndSequence;
+    local float EndFrame,EndRate;
+    if (IsRemotePlayerPawn())
+    {
+        if (Channel!=0 || Pawn==None || Pawn.bDeleteMe || Hero(Pawn)==None) return;
+        if (Character(Pawn).bIsDead || IsRemoteHardControlActive()) return;
+        Pawn.GetAnimParams(0,EndSequence,EndFrame,EndRate);
+        if (EndFrame<0) return;
+        if (ThisSkill!=None)
+        {
+            if (EndSequence!=ThisSkill.AnimSequence) return;
+        }
+        else
+        {
+            // A completed orphan attack still owns a real end callback. Never
+            // convert an active replacement clip or basic/support pose to idle.
+            if (Pawn.IsAnimating(0) || Hero(Pawn).IsBasicAnim(EndSequence)
+                || EndSequence=='Spirits') return;
+        }
+    }
+
+
+        // Other blend channels and late callbacks cannot finish the current
+        // received base-channel attack or consume another action-pool entry.
 		DestroyActionEffect();
 		// 如果是玩家角色且有当前技能
 		if (Character(Pawn).IsAvatar() && ThisSkill != None) 
@@ -2417,7 +2584,60 @@ state MeleeAttacking extends Attacking
 	 */
 	event ActionEnd(bool bTweenToIdle, optional float TweenTime)
 	{
-		Character(Pawn).StartIdle(bTweenToIdle, TweenTime);
+        local Character C;
+        local name BaseSequence;
+        local float BaseRate;
+    local name CurrentSequence;
+    local float CurrentFrame,CurrentRate;
+    local bool bCurrentPlaying;
+        C=Character(Pawn);
+    if (IsRemotePlayerPawn() && C!=None && !C.bDeleteMe)
+    {
+        // A stale ordinary cleanup must never take the advanced/support channel.
+        if (IsInState('SecondSkillAttacking')) return;
+        C.GetAnimParams(0,CurrentSequence,CurrentFrame,CurrentRate);
+        bCurrentPlaying=C.IsAnimating(0);
+        if (bCurrentPlaying && !Hero(Pawn).IsBasicAnim(CurrentSequence)
+            && (ThisSkill==None || CurrentSequence!=ThisSkill.AnimSequence)) return;
+    }
+
+        if (!IsRemotePlayerPawn())
+        {
+            if (C!=None) C.StartIdle(bTweenToIdle,TweenTime);
+        }
+        else if (bTweenToIdle && C!=None && !C.bDeleteMe && !C.bIsDead
+            && PSI!=None && !PSI.bDeleteMe && PSI.bIsAlive
+            && !IsRemoteHardControlActive())
+        {
+            // End of a received action owns pose recovery, not movement.
+            // A moving queue is not a reason to leave a finished attack frozen.
+            BaseRate=1.0;
+            if (Pawn.Physics==PHYS_Falling)
+                BaseSequence=C.BasicAnim[3];
+            else if (Pawn.PrePivot.Z==Pawn.Default.PrePivot.Z+200
+                && Pawn.HasAnim('FlyIdle') && Pawn.HasAnim('FlyForward'))
+            {
+                if (Pawn.Acceleration==vect(0,0,0)
+                    && Pawn.Velocity.X*Pawn.Velocity.X+Pawn.Velocity.Y*Pawn.Velocity.Y<1000)
+                    BaseSequence='FlyIdle';
+                else BaseSequence='FlyForward';
+            }
+            else if (Pawn.Acceleration==vect(0,0,0)
+                && Pawn.Velocity.X*Pawn.Velocity.X+Pawn.Velocity.Y*Pawn.Velocity.Y<1000)
+                BaseSequence=C.BasicAnim[0];
+            else
+            {
+                BaseRate=C.AnimSpeed;
+                if (!(BaseRate>0 && BaseRate<100)) BaseRate=1.0;
+                if (Pawn.bIsWalking) BaseSequence=C.BasicAnim[1];
+                else BaseSequence=C.BasicAnim[2];
+            }
+            if (BaseSequence=='' || !Pawn.HasAnim(BaseSequence))
+            { BaseSequence=C.BasicAnim[0]; BaseRate=1.0; }
+            if (BaseSequence!='' && Pawn.HasAnim(BaseSequence)
+                && !(bCurrentPlaying && Hero(Pawn).IsBasicAnim(CurrentSequence)))
+                C.CHAR_LoopAnim(BaseSequence,BaseRate,0.1,0);
+        }
 		// 如果是玩家，清除命中检测信息
 		if (bIsPlayer) 
 		{
@@ -2425,7 +2645,7 @@ state MeleeAttacking extends Attacking
 			HDI.CheckBone = '';
 		}
 		ThisSkill = None;
-		Destination = Pawn.Location;
+		if (!IsRemotePlayerPawn()) Destination = Pawn.Location;
 	}
 
 	
@@ -2572,6 +2792,42 @@ state MeleeAttacking extends Attacking
 	 */
 	function PlayerMove(float DeltaTime)
 	{
+        local MoveQueue Queue;
+        local name AnimSeq;
+        local float AnimFrame,AnimRate;
+
+        // Received melee owns animation only. Do not run the local melee
+        // input/hit-detection tail after advancing a remote airborne pawn.
+        if (IsRemotePlayerPawn())
+        {
+            if (Pawn.bDeleteMe || Level==None || Hero(Pawn)==None
+                || !class'SceneRegistry.LiveRegistry'.static.IsLiveActor(Pawn,Level)
+                || PSI==None || PSI.bDeleteMe) return;
+            Queue=class'RemoteMotionSys.QueueIndex'.static.Get(Self,PSI.PanID,False);
+            if (!PSI.bIsAlive || Character(Pawn).bIsDead || IsRemoteHardControlActive()
+                || IsInState('Knockbacking') || IsInState('Stunning')
+                || IsInState('Freezing') || IsInState('JustDead'))
+            {
+                if (Queue!=None) Queue.Reset();
+                Pawn.Acceleration=vect(0,0,0);
+                Pawn.Velocity.X=0; Pawn.Velocity.Y=0;
+                bSyncingPosition=False; bMouseMove=False;
+                return;
+            }
+            if (IsRemoteSkillDashLockActive())
+            {
+                if (Queue!=None) Queue.Reset();
+                return;
+            }
+            if (Queue!=None)
+            {
+                Pawn.GetAnimParams(0,AnimSeq,AnimFrame,AnimRate);
+                // Global PlayerTick commits remote movement once after state work.
+                bSyncingPosition=Queue.Moving; bMouseMove=bSyncingPosition;
+            }
+            return;
+        }
+
 		// 如果不在连击状态，禁止移动
 		if(ComboCount == -1) 
 		{
@@ -2608,8 +2864,16 @@ state MeleeAttacking extends Attacking
 		}
 	}
 }
-
-function PlayerArmed();	// 玩家装备武器
+function PlayerArmed()
+{
+    // Hero.Arm invokes this only after weapon attachments and SetupBasicAnims.
+    if ( IsInState('RangeAttacking') && !bIsActing
+        && Pawn != None && !Pawn.bDeleteMe
+        && Pawn.PrePivot.Z == Pawn.Default.PrePivot.Z + 200
+        && Hero(Pawn) != None && Hero(Pawn).bArmed
+        && !Hero(Pawn).bIsDead )
+        Hero(Pawn).CHAR_TweenToWaiting(0.1);
+}	// 玩家装备武器
 
 /**
  * 远程攻击状态
@@ -2710,12 +2974,30 @@ state RangeAttacking extends Attacking
 	 * 动画步骤
 	 * @param Channel 动画通道
 	 */
-	function AnimStep(int Channel)
-	{
-		DestroyActionEffect();
-		StartFire();
-		bJustFired = True;
-	}
+function AnimStep(int Channel)
+{
+ local name EndSequence;
+ local float EndFrame,EndRate;
+
+    if (IsRemotePlayerPawn())
+    {
+        // Only this state's completed ordinary cast owns recovery. Skill data
+        // may have changed since reception; the active channel is authoritative.
+        if (!IsInState('RangeAttacking') || Channel!=0 || Pawn==None
+            || Pawn.bDeleteMe || Hero(Pawn)==None) return;
+        if (Character(Pawn).bIsDead || IsRemoteHardControlActive()) return;
+        Pawn.GetAnimParams(0,EndSequence,EndFrame,EndRate);
+        if (EndFrame<0 || Pawn.IsAnimating(0) || Hero(Pawn).IsBasicAnim(EndSequence)
+            || EndSequence=='Spirits') return;
+        bIsActing=False;
+        PlanNextAction();
+        return;
+    }
+
+ DestroyActionEffect();
+ StartFire();
+ bJustFired=True;
+}
 	
 	/**
 	 * 动画结束事件
@@ -2723,8 +3005,26 @@ state RangeAttacking extends Attacking
 	 */
 	function AnimEnd(int Channel)
 	{
+    local name EndSequence;
+    local float EndFrame,EndRate;
+
 		local name OldName;
 		local float OldFrame, OldRate;
+
+    if (IsRemotePlayerPawn())
+    {
+        // Only this state's completed ordinary cast owns recovery. Skill data
+        // may have changed since reception; the active channel is authoritative.
+        if (!IsInState('RangeAttacking') || Channel!=0 || Pawn==None
+            || Pawn.bDeleteMe || Hero(Pawn)==None) return;
+        if (Character(Pawn).bIsDead || IsRemoteHardControlActive()) return;
+        Pawn.GetAnimParams(0,EndSequence,EndFrame,EndRate);
+        if (EndFrame<0 || Pawn.IsAnimating(0) || Hero(Pawn).IsBasicAnim(EndSequence)
+            || EndSequence=='Spirits') return;
+        bIsActing=False;
+        PlanNextAction();
+        return;
+    }
 
 		Pawn.GetAnimParams(Channel,OldName,OldFrame,OldRate);
 
@@ -2762,6 +3062,7 @@ state RangeAttacking extends Attacking
 	 */
 	function PlanNextAction()
 	{
+ if (IsRemotePlayerPawn() && !IsInState('RangeAttacking')) return;
 		ActionEnd(True,0.3);
 		bJustFired = False;
 		GotoState('Navigating');
@@ -2774,8 +3075,63 @@ state RangeAttacking extends Attacking
 	 */
 	event ActionEnd(bool bTweenToIdle, optional float TweenTime)
 	{
-		Character(Pawn).StartIdle(bTweenToIdle, TweenTime);
+        local Character C;
+        local name BaseSequence;
+        local float BaseRate;
+    local name CurrentSequence;
+    local float CurrentFrame,CurrentRate;
+    local bool bCurrentPlaying;
+        C=Character(Pawn);
+    if (IsRemotePlayerPawn() && C!=None && !C.bDeleteMe)
+    {
+        // A stale ordinary cleanup must never take the advanced/support channel.
+        if (IsInState('SecondSkillAttacking')) return;
+        C.GetAnimParams(0,CurrentSequence,CurrentFrame,CurrentRate);
+        bCurrentPlaying=C.IsAnimating(0);
+        if (bCurrentPlaying && !Hero(Pawn).IsBasicAnim(CurrentSequence)
+            && (ThisSkill==None || CurrentSequence!=ThisSkill.AnimSequence)) return;
+    }
+
+        if (!IsRemotePlayerPawn())
+        {
+            if (C!=None) C.StartIdle(bTweenToIdle,TweenTime);
+        }
+        else if (bTweenToIdle && C!=None && !C.bDeleteMe && !C.bIsDead
+            && PSI!=None && !PSI.bDeleteMe && PSI.bIsAlive
+            && !IsRemoteHardControlActive())
+        {
+            // End of a received action owns pose recovery, not movement.
+            // A moving queue is not a reason to leave a finished attack frozen.
+            BaseRate=1.0;
+            if (Pawn.Physics==PHYS_Falling)
+                BaseSequence=C.BasicAnim[3];
+            else if (Pawn.PrePivot.Z==Pawn.Default.PrePivot.Z+200
+                && Pawn.HasAnim('FlyIdle') && Pawn.HasAnim('FlyForward'))
+            {
+                if (Pawn.Acceleration==vect(0,0,0)
+                    && Pawn.Velocity.X*Pawn.Velocity.X+Pawn.Velocity.Y*Pawn.Velocity.Y<1000)
+                    BaseSequence='FlyIdle';
+                else BaseSequence='FlyForward';
+            }
+            else if (Pawn.Acceleration==vect(0,0,0)
+                && Pawn.Velocity.X*Pawn.Velocity.X+Pawn.Velocity.Y*Pawn.Velocity.Y<1000)
+                BaseSequence=C.BasicAnim[0];
+            else
+            {
+                BaseRate=C.AnimSpeed;
+                if (!(BaseRate>0 && BaseRate<100)) BaseRate=1.0;
+                if (Pawn.bIsWalking) BaseSequence=C.BasicAnim[1];
+                else BaseSequence=C.BasicAnim[2];
+            }
+            if (BaseSequence=='' || !Pawn.HasAnim(BaseSequence))
+            { BaseSequence=C.BasicAnim[0]; BaseRate=1.0; }
+            if (BaseSequence!='' && Pawn.HasAnim(BaseSequence)
+                && !(bCurrentPlaying && Hero(Pawn).IsBasicAnim(CurrentSequence)))
+                C.CHAR_LoopAnim(BaseSequence,BaseRate,0.1,0);
+        }
+		// 如果是玩家，清除命中检测信息
 		ThisSkill = None;
+
 	}
 
 	
@@ -2870,6 +3226,14 @@ state RangeAttacking extends Attacking
 	 */
 	function StartCast()
 	{
+    // Do not begin playback/network effects before the actual weapon setup finishes.
+    if ( Pawn != None && !Pawn.bDeleteMe
+        && Pawn.PrePivot.Z == Pawn.Default.PrePivot.Z + 200 )
+    {
+        if ( Hero(Pawn) == None || !Hero(Pawn).bArmed || bIsActing )
+            return;
+    }
+
 		// 如果Buff禁止行动，直接返回
 		if(PSI.CheckBuffDontAct()) 
 			return ;
@@ -3156,6 +3520,7 @@ function PostBeginPlay()
 
 	// 创建附魔盒
 	EnchantBox = class'EnchantBox'.Static.Create(Self, Self);
+    ;
 }
 
 /**
@@ -3163,8 +3528,8 @@ function PostBeginPlay()
  * 清理所有资源
  */
 function Destroyed()
-{
-	Super.Destroyed();
+{ class'BowAttackRuntime.RoundStore'.static.Release(Self);  class'RemoteMotionSys.QueueIndex'.static.Release(Self);
+	Super(PlayerController).Destroyed();
 
 	// 清空动作池
 	ActionPool.Remove(0,ActionPool.Length);
@@ -3182,8 +3547,7 @@ function Destroyed()
 	}
 
 	// 卸载附魔盒
-	DynamicUnloadObject(EnchantBox);
-	EnchantBox = None;
+	class'ObjectStore.UILifetime'.static.ReleaseBox(EnchantBox,Self);
 }
 
 /**
@@ -3339,12 +3703,16 @@ function CalcBehindView(out vector CameraLocation, out rotator CameraRotation, f
  * @param CameraLocation 摄像机位置（输出）
  * @param CameraRotation 摄像机旋转（输出）
  */
-event PlayerCalcView(out actor ViewActor, out vector CameraLocation, out rotator CameraRotation)
+event PlayerCalcView(out actor ViewActor,out vector CameraLocation,out rotator CameraRotation)
 {
-	Super.PlayerCalcView(ViewActor, CameraLocation, CameraRotation);
-	// 更新控制器位置和旋转
-	SetLocation(CameraLocation);
-	SetRotation(CameraRotation);
+    Super.PlayerCalcView(ViewActor,CameraLocation,CameraRotation);
+    if (Pawn != None && !Pawn.bDeleteMe && ViewActor == Pawn
+        && Pawn.PrePivot.Z == Pawn.Default.PrePivot.Z+200)
+        CameraLocation.Z+=200;
+    SetLocation(CameraLocation);
+    SetRotation(CameraRotation);
+    if (bIsPlayer && !bCameraShaking && (ViewType == QuaterView || ViewType == BehindFree))
+        class'FreeviewSettings'.static.ObserveAngle(CameraRotation,Level.TimeSeconds);
 }
 
 /**
@@ -3361,7 +3729,7 @@ function Possess(Pawn aPawn)
 		Player.GameState = Player.GM_Normal;
 		ConsoleCommand("CHECKCURSOR");
 	}
-}
+ class'BowAttackRuntime.DefinitionStore'.static.Capture(Self); }
 
 /**
  * 追踪并检查命中
@@ -3461,6 +3829,98 @@ function SetStamina(float DeltaTime)
  */
 function PlayerTick(float DeltaTime)
 {
+    local MoveQueue MotionQueue;
+    local name MotionSequence;
+    local float MotionFrame,MotionRate;
+    local int DisplayToken;
+    local vector DisplayVelocity,DisplayAcceleration;
+    local float DisplayGround,DisplayDesired;
+    local Actor.EPhysics DisplayPhysics;
+    local name BasePose;
+    local float BasePoseRate;
+    if (IsRemotePlayerPawn())
+    {
+        if (CoolTime>0)
+        {
+            CoolTime-=DeltaTime;
+            if (CoolTime==0) CoolTime=-0.01;
+        }
+        if (Pawn==None || Pawn.bDeleteMe || Hero(Pawn)==None || Level==None
+            || PSI==None || PSI.bDeleteMe
+            || !class'SceneRegistry.LiveRegistry'.static.IsLiveActor(Pawn,Level)) return;
+        MotionQueue=class'RemoteMotionSys.QueueIndex'.static.Get(Self,PSI.PanID,False);
+        if (!PSI.bIsAlive || Character(Pawn).bIsDead || IsRemoteHardControlActive()
+            || IsInState('Knockbacking') || IsInState('Stunning')
+            || IsInState('Freezing') || IsInState('JustDead'))
+        {
+            if (MotionQueue!=None) MotionQueue.Reset();
+            // Only genuine control states run their own movement handler.
+            PlayerMove(DeltaTime);
+            bSyncingPosition=False; bMouseMove=False;
+            return;
+        }
+        if (IsRemoteSkillDashLockActive()) { PlayerMove(DeltaTime); return; }
+        if (MotionQueue!=None)
+        {
+            Pawn.GetAnimParams(0,MotionSequence,MotionFrame,MotionRate);
+            MotionQueue.Step(DeltaTime,!Hero(Pawn).IsBasicAnim(MotionSequence));
+            bSyncingPosition=MotionQueue.Moving; bMouseMove=bSyncingPosition;
+            // Bounded completion repair belongs to the display lane, not any
+            // local walking/attack PlayerMove implementation. It never replays
+            // a received action or generates ordinary hit/network packets.
+            if (MotionQueue.TakeDisplayEnd(Level.TimeSeconds))
+            {
+                DisplayToken=MotionQueue.DisplaySerial;
+                DisplayVelocity=Pawn.Velocity; DisplayAcceleration=Pawn.Acceleration;
+                DisplayGround=Pawn.GroundSpeed; DisplayDesired=Pawn.DesiredSpeed;
+                DisplayPhysics=Pawn.Physics;
+                AnimEnd(0);
+                if (Pawn!=None && !Pawn.bDeleteMe && PSI!=None && PSI.bIsAlive
+                    && !Character(Pawn).bIsDead && !IsRemoteHardControlActive()
+                    && !IsRemoteSkillDashLockActive() && Pawn.Physics==DisplayPhysics)
+                {
+                    // Completion cannot stop locomotion or begin a second start.
+                    Pawn.Velocity.X=DisplayVelocity.X; Pawn.Velocity.Y=DisplayVelocity.Y;
+                    Pawn.Acceleration.X=DisplayAcceleration.X; Pawn.Acceleration.Y=DisplayAcceleration.Y;
+                    Pawn.GroundSpeed=DisplayGround; Pawn.DesiredSpeed=DisplayDesired;
+                    bSyncingPosition=MotionQueue.Moving; bMouseMove=bSyncingPosition;
+                    if (MotionQueue.DisplaySerial==DisplayToken)
+                    {
+                        Pawn.GetAnimParams(0,MotionSequence,MotionFrame,MotionRate);
+                        if (MotionSequence==MotionQueue.DisplaySequence && MotionFrame>=0 && !Pawn.IsAnimating(0))
+                        {
+                            // An orphan frozen last pose needs a base loop even
+                            // if an old state lost its ThisSkill metadata.
+                            BasePoseRate=Character(Pawn).AnimSpeed;
+                            if (!(BasePoseRate>0 && BasePoseRate<100)) BasePoseRate=1;
+                            if (Pawn.Physics==PHYS_Falling) BasePose=Character(Pawn).BasicAnim[3];
+                            else if (Pawn.PrePivot.Z==Pawn.Default.PrePivot.Z+200
+                                && Pawn.HasAnim('FlyIdle') && Pawn.HasAnim('FlyForward'))
+                            {
+                                BasePoseRate=1;
+                                if (MotionQueue.Moving) BasePose='FlyForward';
+                                else BasePose='FlyIdle';
+                            }
+                            else if (!MotionQueue.Moving) { BasePose=Character(Pawn).BasicAnim[0]; BasePoseRate=1; }
+                            else if (Pawn.bIsWalking) BasePose=Character(Pawn).BasicAnim[1];
+                            else BasePose=Character(Pawn).BasicAnim[2];
+                            if (BasePose!='' && Pawn.HasAnim(BasePose))
+                                Character(Pawn).CHAR_LoopAnim(BasePose,BasePoseRate,0.1,0);
+                        }
+                        MotionQueue.DisplayActive=False;
+                    }
+                }
+            }
+            // Locomotion selects a base pose only after committing movement.
+            // Active ordinary, advanced and support clips retain their callbacks.
+            Pawn.GetAnimParams(0,MotionSequence,MotionFrame,MotionRate);
+            if (Hero(Pawn).IsBasicAnim(MotionSequence))
+                Character(Pawn).CHAR_CheckWalkAnim(Pawn.Acceleration,False,False);
+        }
+        return;
+    }
+
+
 	// 更新冷却时间
 	if ( CoolTime > 0 )
 	{
@@ -4172,13 +4632,50 @@ event NetRecv_PlayerMove(vector Loc,rotator Rot,vector Acc,bool bJump,float Jump
 	local float Distance2D;
 	local float SpeedMultiplier;
 	local vector NewLocation;
+    local MoveQueue Queue;
+    local float WireSpeed,WalkScale;
 
+        if (Pawn == None || Pawn.bDeleteMe || Character(Pawn) == None || Level == None) return;
 	LastServerLocation = Loc;
 	LastServerRotation = Rot;
 	LastServerMoveTime = Level.TimeSeconds;
 	SpeedMultiplier = 1.0;
 
 	// 设置期望旋转
+        if (IsRemotePlayerPawn())
+        {
+            if (PSI==None || PSI.bDeleteMe
+                || !class'SceneRegistry.LiveRegistry'.static.IsLiveActor(Pawn,Level)) return;
+            Queue=class'RemoteMotionSys.QueueIndex'.static.Get(Self,PSI.PanID,True);
+            if (Queue==None) return;
+            if (!PSI.bIsAlive || Character(Pawn).bIsDead || IsRemoteHardControlActive()
+                || IsInState('Knockbacking') || IsInState('Stunning')
+                || IsInState('Freezing') || IsInState('JustDead')
+                || IsRemoteSkillDashLockActive())
+            {
+                Queue.Reset();
+                if (!IsRemoteSkillDashLockActive())
+                {
+                    Pawn.Acceleration=vect(0,0,0);
+                    Pawn.Velocity.X=0; Pawn.Velocity.Y=0;
+                }
+                bSyncingPosition=False; bMouseMove=False;
+                return;
+            }
+            // Native bridge supplies this packet's speed before the callback.
+            // Jump packets have no speed field; the queue retains the last one.
+            WireSpeed=Pawn.GroundSpeed;
+            if (bJump && Queue.LastWireSpeed<=0)
+                WireSpeed=Character(Pawn).CurrentGroundSpeed;
+            WalkScale=PSI.WalkingPct;
+            if (!(WalkScale>0 && WalkScale<=1)) WalkScale=Pawn.WalkingPct;
+            Queue.Push(Loc,Rot,WireSpeed,!PSI.RunState,WalkScale,bJump,JumpZ,Acc);
+            StuckCheckTime=0; SyncSpeedMultiplier=1.0;
+            Pawn.bRotateToDesired=False;
+            // Do not change state/label, destination or active segment here.
+            return;
+        }
+
 	DesiredRotation = Rot;
 	// 更新Pawn的旋转（只更新偏航角）
 	CRot = Pawn.Rotation;
@@ -4186,14 +4683,9 @@ event NetRecv_PlayerMove(vector Loc,rotator Rot,vector Acc,bool bJump,float Jump
 	Pawn.SetRotation(CRot);
 	Pawn.bRotateToDesired = False;
 
-	if ( IsRemotePlayerPawn() && IsRemoteHardControlActive() )
-	{
-		SnapRemoteToServerLocation(Loc, True);
-		return;
-	}
 
-	if ( IsRemotePlayerPawn() && ShouldHoldRemoteSkillDashMove(Loc) )
-		return;
+
+
 
 	// 如果服务器通知跳跃
 	if ( bJump ) 
@@ -4205,102 +4697,17 @@ event NetRecv_PlayerMove(vector Loc,rotator Rot,vector Acc,bool bJump,float Jump
 	}
 
 	// 位置同步加速追赶处理（仅用于其他玩家角色）
-	if ( Pawn != None && !Character(Pawn).IsAvatar() )
-	{
-		if ( SyncCloseDistance == 0 )
-			SyncCloseDistance = 30.0;
-		
-		// 计算当前位置与服务器位置的2D距离
-		vDiff = Loc - Pawn.Location;
-		vDiff.Z = 0;
-		Distance2D = VSize(vDiff);
+        bSyncingPosition=False;
 
-		/*
-		if ( IsRemotePvpStrictSync() && Distance2D > 1000.0 )
-		{
-			SnapRemoteToServerLocation(Loc, False);
-			Distance2D = 0.0;
-			SpeedMultiplier = 1.0;
-		} */
-		
-		//("NetRecv_PlayerMove Distance2D: "$Distance2D);
-
-		// 根据距离设置速度倍数（分段线性加速）
-		if ( Distance2D > 3000.0 ) 
-		{
-			// 距离非常大，直接瞬移到服务器位置
-			NewLocation = Loc;
-			NewLocation.Z = Pawn.Location.Z;  // 保持Z轴
-			Pawn.SetLocation(NewLocation);
-			bSyncingPosition = False;
-			SpeedMultiplier = 1.0;
-		}
-		else if ( Distance2D > 2000.0 )
-		{
-			// 2000-3000: 10-20倍线性加速
-			// SpeedMultiplier = 10.0 + ((Distance2D - 2000.0) / 1000.0) * (20.0 - 10.0)
-			SpeedMultiplier = 10.0 + (Distance2D - 2000.0) / 1000.0 * 10.0;
-			bSyncingPosition = True;
-		}
-		else if ( Distance2D > 1000.0 )
-		{
-			// 1000-2000: 5-10倍线性加速
-			// SpeedMultiplier = 5.0 + ((Distance2D - 1000.0) / 1000.0) * (10.0 - 5.0)
-			SpeedMultiplier = 5.0 + (Distance2D - 1000.0) / 1000.0 * 5.0;
-			bSyncingPosition = True;
-		}
-		else if ( Distance2D > 500.0 )
-		{
-			// 500-1000: 3-5倍线性加速
-			// SpeedMultiplier = 3.0 + ((Distance2D - 500.0) / 500.0) * (5.0 - 3.0)
-			SpeedMultiplier = 3.0 + (Distance2D - 500.0) / 500.0 * 2.0;
-			bSyncingPosition = True;
-		}
-		else if ( Distance2D > 0.0 )
-		{
-			// 0-500: 1-3倍线性加速
-			// SpeedMultiplier = 1.0 + (Distance2D / 500.0) * (3.0 - 1.0)
-			SpeedMultiplier = 1.0 + Distance2D / 500.0 * 0.5;
-			bSyncingPosition = True;
-		}
-		else
-		{
-			SpeedMultiplier = 1.0;
-			bSyncingPosition = False;
-		}
-
-
-		//DebugLog("NetRecv_PlayerMove SpeedMultiplier: "$SpeedMultiplier);
-		
-		// 保存原始速度（如果还没有保存）
-		if ( OriginalGroundSpeed == 0 && Character(Pawn).CurrentGroundSpeed > 0 )
-			OriginalGroundSpeed = Character(Pawn).CurrentGroundSpeed;
-		
-		// 应用速度倍数
-		if ( bSyncingPosition && OriginalGroundSpeed > 0 )
-		{
-			SyncSpeedMultiplier = SpeedMultiplier;
-			Pawn.GroundSpeed = OriginalGroundSpeed * SpeedMultiplier;
-		}
-		else if ( !bSyncingPosition && OriginalGroundSpeed > 0 )
-		{
-			// 恢复正常速度
-			Pawn.GroundSpeed = OriginalGroundSpeed;
-			OriginalGroundSpeed = 0;  // 重置，下次需要时重新保存
-		}
-		
-		// 更新上次同步位置，用于卡地形检测
-		LastSyncLocation = Pawn.Location;
-		StuckCheckTime = 0;  // 重置卡住检测时间
-	}
-	else
-	{
-		// 玩家自己，不使用同步加速
-		bSyncingPosition = False;
-	}
 
 	// 根据当前状态处理移动
-	if ( IsInState('Attacking') ) 
+	if (IsRemotePlayerPawn() && (IsInState('MeleeAttacking') || IsInState('BowAttacking') || IsInState('RangeAttacking')))
+    {
+        Destination=Loc;
+        HandleWalking();
+        GotoState(GetStateName(),'Move');
+    }
+    else if ( IsInState('Attacking') || IsInState('CommandMelee') )
 	{
 		// 攻击状态下移动到目标位置
 		Destination = Loc;
@@ -4354,7 +4761,7 @@ event NetRecv_PlayerModeChange(string ModeName)
 	else if (ModeName == "Run") Pawn.SetWalking(False);		// 奔跑模式
 	else if (ModeName == "Walk") Pawn.SetWalking(True);		// 行走模式
 	else if (ModeName == "PK") ;								// PK模式（空实现）
-	else if (ModeName == "NotPK") ;							// 非PK模式（空实现）
+	else ; 							// 非PK模式（空实现）
 }
 
 
@@ -4371,7 +4778,7 @@ event NetRecv_PlayerAnimation(string sName)
 
 // 网络接收技能相关事件
 event NetRecv_AssignSkill(int Index, string SkillName);	// 分配技能
-event NetRecv_UpdateSkill(Skill Skill);					// 更新技能
+event NetRecv_UpdateSkill(Skill Skill) { class'BowAttackRuntime.DefinitionStore'.static.Refresh(Self,Skill); }					// 更新技能
 event NetRecv_LearnSkill(Skill Skill);					// 学习技能
 
 // 网络接收区域和移动相关事件
@@ -4390,7 +4797,31 @@ event NetRecv_NpcDialog(NpcServerInfo NpcSI, string Dialog);	// NPC对话
  */
 event NetRecv_ActMeleeCombo(string SkillName, character Target, vector TargetLoc, float Speed, int CC)
 {
+
+
+    local name PrioritySequence;
+    local float PriorityFrame,PriorityRate;
+
 	local Skill Skill;
+    if (IsRemotePlayerPawn()) ActionPool.Length=0;
+
+    // Ordinary actions are discarded, never buffered. Movement is independent.
+    if (IsRemotePlayerPawn() && PSI!=None && !class'RemoteMotionSys.QueueIndex'.static.AllowAction(Self,PSI.PanID,1)) return;
+    if (IsRemotePlayerPawn() && Pawn!=None && PSI!=None && PSI.JobName=='Bow')
+    {
+        Pawn.GetAnimParams(0,PrioritySequence,PriorityFrame,PriorityRate);
+        // A self-support cast may have received its BUFF acknowledgement before
+        // its one-shot character animation ends. Do not cut that animation short.
+        if (PrioritySequence=='Spirits' && Pawn.IsAnimating(0)) return;
+    }
+
+
+    if (SkillName ~= "Berserker")
+    {
+        ;
+        return;
+    }
+
 
 	// 如果动作池为空，立即执行动作
 	if ( ActionPool.Length == 0 ) 
@@ -4403,7 +4834,8 @@ event NetRecv_ActMeleeCombo(string SkillName, character Target, vector TargetLoc
 		// 设置连击计数（减1因为计数从0开始）
 		ComboCount = CC - 1;
 		// 停止移动
-		Pawn.Acceleration = vect(0,0,0);
+		if (!IsRemotePlayerPawn() || IsRemoteHardControlActive() || IsRemoteDashSkillName(SkillName))
+            Pawn.Acceleration = vect(0,0,0);
 		BeginRemoteSkillDashLock(SkillName, TargetLoc, Speed);
 		// 开始连击
 		NetRecv_StartCombo(Skill,CC - 1,Speed);
@@ -4423,7 +4855,31 @@ event NetRecv_ActMeleeCombo(string SkillName, character Target, vector TargetLoc
  */
 event NetRecv_ActMeleeFinish(string SkillName, character Target, vector TargetLoc, float Speed)
 {
+
+
+    local name PrioritySequence;
+    local float PriorityFrame,PriorityRate;
+
 	local Skill Skill;
+    if (IsRemotePlayerPawn()) ActionPool.Length=0;
+
+    // Ordinary actions are discarded, never buffered. Movement is independent.
+    if (IsRemotePlayerPawn() && PSI!=None && !class'RemoteMotionSys.QueueIndex'.static.AllowAction(Self,PSI.PanID,1)) return;
+    if (IsRemotePlayerPawn() && Pawn!=None && PSI!=None && PSI.JobName=='Bow')
+    {
+        Pawn.GetAnimParams(0,PrioritySequence,PriorityFrame,PriorityRate);
+        // A self-support cast may have received its BUFF acknowledgement before
+        // its one-shot character animation ends. Do not cut that animation short.
+        if (PrioritySequence=='Spirits' && Pawn.IsAnimating(0)) return;
+    }
+
+
+    if (SkillName ~= "Berserker")
+    {
+        ;
+        return;
+    }
+
 
 	// 如果动作池为空，立即执行动作
 	if ( ActionPool.Length == 0 ) 
@@ -4454,7 +4910,75 @@ event NetRecv_ActMeleeFinish(string SkillName, character Target, vector TargetLo
  */
 event NetRecv_StartCast(Skill Skill, character Target, vector TargetLoc, float Speed)
 {
+    local Pawn MovePawn;
+    local vector MoveVelocity,MoveAcceleration,MoveDestination;
+    local float MoveDesired,MoveGroundSpeed;
+    local Actor.EPhysics MovePhysics;
+    local bool HoldMovement,MoveMouse,MoveSync;
+
+    local name PrioritySequence;
+    local float PriorityFrame,PriorityRate;
+
 	local float	realAnimRate;
+    HoldMovement=IsRemotePlayerPawn() && Pawn!=None && !Pawn.bDeleteMe
+        && PSI!=None && !PSI.bDeleteMe && PSI.bIsAlive && !Character(Pawn).bIsDead
+        && !IsRemoteHardControlActive() && !IsRemoteSkillDashLockActive();
+    if (HoldMovement)
+    {
+        MovePawn=Pawn; MovePhysics=Pawn.Physics;
+        MoveVelocity=Pawn.Velocity; MoveAcceleration=Pawn.Acceleration;
+        MoveDesired=Pawn.DesiredSpeed; MoveGroundSpeed=Pawn.GroundSpeed;
+        MoveDestination=Destination; MoveMouse=bMouseMove; MoveSync=bSyncingPosition;
+        Pawn.bCanStrafe=True;
+    }
+
+    // Ordinary actions are discarded, never buffered. Movement is independent.
+    if (IsRemotePlayerPawn())
+    {
+        if (Pawn==None || Pawn.bDeleteMe || PSI==None || PSI.bDeleteMe
+            || Skill==None || !PSI.bIsAlive || Character(Pawn).bIsDead
+            || IsRemoteHardControlActive()) return;
+        if (!class'RemoteMotionSys.QueueIndex'.static.AllowAction(Self,PSI.PanID,1)) return;
+    }
+    if (IsRemotePlayerPawn() && Pawn!=None && PSI!=None && PSI.JobName=='Bow')
+    {
+        Pawn.GetAnimParams(0,PrioritySequence,PriorityFrame,PriorityRate);
+        // A self-support cast may have received its BUFF acknowledgement before
+        // its one-shot character animation ends. Do not cut that animation short.
+        if (PrioritySequence=='Spirits' && Pawn.IsAnimating(0)) {
+    if (HoldMovement && Pawn==MovePawn && !Pawn.bDeleteMe
+        && Pawn.Physics==MovePhysics && PSI!=None && !PSI.bDeleteMe && PSI.bIsAlive
+        && !Character(Pawn).bIsDead && !IsRemoteHardControlActive()
+        && !IsRemoteSkillDashLockActive())
+    {
+        Pawn.Velocity.X=MoveVelocity.X; Pawn.Velocity.Y=MoveVelocity.Y;
+        Pawn.Acceleration.X=MoveAcceleration.X; Pawn.Acceleration.Y=MoveAcceleration.Y;
+        Pawn.DesiredSpeed=MoveDesired; Pawn.GroundSpeed=MoveGroundSpeed;
+        Pawn.bCanStrafe=True; Destination=MoveDestination;
+        bMouseMove=MoveMouse; bSyncingPosition=MoveSync;
+    }
+        return;
+    }
+    }
+
+
+    if (Skill != None && Skill.SkillName ~= "Berserker")
+    {
+        ;
+            if (HoldMovement && Pawn==MovePawn && !Pawn.bDeleteMe
+        && Pawn.Physics==MovePhysics && PSI!=None && !PSI.bDeleteMe && PSI.bIsAlive
+        && !Character(Pawn).bIsDead && !IsRemoteHardControlActive()
+        && !IsRemoteSkillDashLockActive())
+    {
+        Pawn.Velocity.X=MoveVelocity.X; Pawn.Velocity.Y=MoveVelocity.Y;
+        Pawn.Acceleration.X=MoveAcceleration.X; Pawn.Acceleration.Y=MoveAcceleration.Y;
+        Pawn.DesiredSpeed=MoveDesired; Pawn.GroundSpeed=MoveGroundSpeed;
+        Pawn.bCanStrafe=True; Destination=MoveDestination;
+        bMouseMove=MoveMouse; bSyncingPosition=MoveSync;
+    }
+        return;
+    }
+
 
 	// 旋转到目标位置（优先使用目标角色位置）
 	if ( Target != None && !Target.bDeleteMe )
@@ -4467,15 +4991,50 @@ event NetRecv_StartCast(Skill Skill, character Target, vector TargetLoc, float S
 	{
 		// 清除受伤标志并停止移动
 		Character(Pawn).bJustDamaged = False;  
-		Pawn.Acceleration = vect(0,0,0);  
+		if (!IsRemotePlayerPawn() || IsRemoteHardControlActive())
+            Pawn.Acceleration = vect(0,0,0);
 
 		// 计算实际动画速率（速度的倒数）
-		realAnimRate = 1.0 / Speed;
+		if (IsRemotePlayerPawn() && !(Speed>0 && Speed<10000))
+            realAnimRate=1.0;
+        else realAnimRate = 1.0 / Speed;
 		// 播放施法动画
+        if (IsRemotePlayerPawn())
+        {
+            GotoState('RangeAttacking');
+            ThisSkill=Skill; bIsActing=True; bJustFired=False;
+        }
 		Character(Pawn).PlayAnimAction(Skill.AnimSequence, -1,realAnimRate,0.3);
+        if (IsRemotePlayerPawn() && (PSI.JobName=='Red' || PSI.JobName=='Blue')
+            && IsInState('RangeAttacking') && Pawn.HasAnim(Skill.AnimSequence))
+        {
+            Pawn.GetAnimParams(0,PrioritySequence,PriorityFrame,PriorityRate);
+            // Native PlayAnimAction is a no-op when its action table is absent
+            // or lacks this sequence, even when the mesh owns the real clip.
+            // Fall back only on an observable failed start, never replay a cast.
+            if (PrioritySequence!=Skill.AnimSequence)
+            {
+                ;
+                Character(Pawn).AnimSequence=Skill.AnimSequence;
+                Pawn.PlayAnim(Skill.AnimSequence,realAnimRate,0.3,0);
+            }
+        }
+
 		// 生成施法特效
 		SpawnCastEffect(Skill);
+        if (IsRemotePlayerPawn() && PSI!=None) class'RemoteMotionSys.QueueIndex'.static.NoteAction(Self,PSI.PanID,1,Skill.AnimSequence);
 	}
+    if (HoldMovement && Pawn==MovePawn && !Pawn.bDeleteMe
+        && Pawn.Physics==MovePhysics && PSI!=None && !PSI.bDeleteMe && PSI.bIsAlive
+        && !Character(Pawn).bIsDead && !IsRemoteHardControlActive()
+        && !IsRemoteSkillDashLockActive())
+    {
+        Pawn.Velocity.X=MoveVelocity.X; Pawn.Velocity.Y=MoveVelocity.Y;
+        Pawn.Acceleration.X=MoveAcceleration.X; Pawn.Acceleration.Y=MoveAcceleration.Y;
+        Pawn.DesiredSpeed=MoveDesired; Pawn.GroundSpeed=MoveGroundSpeed;
+        Pawn.bCanStrafe=True; Destination=MoveDestination;
+        bMouseMove=MoveMouse; bSyncingPosition=MoveSync;
+    }
 }
 
 /**
@@ -4543,17 +5102,22 @@ exec function SetFirstPersonView()
  */
 exec function SetBehindFreeView()
 {
-	// 设置摄像机距离范围
-	MinCameraDist = 5;
-	MaxCameraDist = 40;
-	CameraDist = 20;	// 默认距离
-	// 设置视野角度为80度
-	SetFOV(80);
-	ViewType = BehindFree;
-	bBehindView = True;
-	// 保存设置到配置文件
-	ConsoleCommand("SETOPTIONI ViewType"@ViewType);
-	ConsoleCommand("SAVEOPTION");
+    local rotator CurrentAngle;
+    CurrentAngle=Rotation;
+    if (!bCameraSet && ViewType != QuaterView && class'FreeviewSettings'.default.bHasAutoAngle)
+        CurrentAngle=class'FreeviewSettings'.default.AutoAngle;
+    if (bCameraSet && !bCameraShaking && (ViewType == QuaterView || ViewType == BehindFree))
+        class'FreeviewSettings'.static.SaveAngle(CurrentAngle);
+    MinCameraDist=5;
+    MaxCameraDist=200;
+    CameraDist=class'FreeviewSettings'.static.LoadDistance();
+    ShakeFactor.OldOffset.Y=CameraDist;
+    SetFOV(80);
+    ViewType=BehindFree;
+    bBehindView=True;
+    SetRotation(CurrentAngle);
+    ConsoleCommand("SETOPTIONI ViewType"@ViewType);
+    ConsoleCommand("SAVEOPTION");
 }
 
 /**
@@ -4562,25 +5126,24 @@ exec function SetBehindFreeView()
  */
 exec function SetQuaterView()
 {
-	local rotator crot;
-
-	// 设置摄像机距离范围
-	MinCameraDist = 25;
-	MaxCameraDist = 40;
-	CameraDist = 30;	// 默认距离
-	// 设置视野角度为80度
-	SetFOV(80);
-	ViewType = QuaterView;
-	bBehindView = True;
-
-	// 根据摄像机距离计算俯仰角（距离越远，俯仰角越大）
-	crot = Rotation;
-	crot.Pitch = -8192.0 * (CameraDist - MinCameraDist) / (MaxCameraDist - MinCameraDist);
-	SetRotation(crot);
-
-	// 保存设置到配置文件
-	ConsoleCommand("SETOPTIONI ViewType"@ViewType);
-	ConsoleCommand("SAVEOPTION");
+    local rotator crot;
+    if (bCameraSet && !bCameraShaking && (ViewType == BehindFree || ViewType == QuaterView))
+        class'FreeviewSettings'.static.SaveAngle(Rotation);
+    MinCameraDist=25;
+    MaxCameraDist=40;
+    CameraDist=30;
+    SetFOV(80);
+    ViewType=QuaterView;
+    bBehindView=True;
+    crot=Rotation;
+    if (class'FreeviewSettings'.default.bHasAutoAngle)
+        crot=class'FreeviewSettings'.default.AutoAngle;
+    else
+        crot.Pitch=-8192.0*(CameraDist-MinCameraDist)/(MaxCameraDist-MinCameraDist);
+    ShakeFactor.OldOffset.Y=CameraDist;
+    SetRotation(crot);
+    ConsoleCommand("SETOPTIONI ViewType"@ViewType);
+    ConsoleCommand("SAVEOPTION");
 }
 
 /**
@@ -4734,6 +5297,7 @@ function string GetHotSkill(byte Index)
  */
 function SetHotSkill(byte Index, string SkillName) 
 {
+    if (class'BowAttackRuntime.RoundStore'.static.DeferSupportSelection(Self,Index,SkillName)) return;
 	if ( PSI != None )
 		// 通知服务器分配技能
 		Net.NotiSkillAssign(Index, SkillName);
@@ -5038,6 +5602,7 @@ function SpawnCastEffect(Skill Skill)
 
 	local Emitter CastEmitter;
 	local Sound CastSound;
+    local bool bHoverBarrier;
 
 	
 	if ( !Character(Pawn).IsAvatar() ) 
@@ -5056,10 +5621,20 @@ function SpawnCastEffect(Skill Skill)
 	
 	if ( CastClass != None )
 	{
-		BoneLocation = Pawn.GetBoneCoords(Skill.FireBone).Origin; 
+		bHoverBarrier = Pawn != None && !Pawn.bDeleteMe
+            && Pawn.PrePivot.Z == Pawn.Default.PrePivot.Z + 200
+            && CastClass.Name == 'Active_ManaBarrier_Casting';
+        BoneLocation = Pawn.GetBoneCoords(Skill.FireBone).Origin;
+        // Give the terrain-snapping effect its normal-mode spawn origin first.
+        if (bHoverBarrier)
+            BoneLocation.Z -= 200;
 		CastEmitter = Spawn(CastClass,,,BoneLocation,Pawn.Rotation);
 
-		if ( CastEmitter.SpawnSoundString != "" )
+		// Translate the finished effect once, even if its ground trace missed.
+        if ( bHoverBarrier && CastEmitter != None && !CastEmitter.bDeleteMe )
+            CastEmitter.SetLocation(CastEmitter.Location + vect(0,0,200));
+
+        if ( CastEmitter.SpawnSoundString != "" )
 			CastSound = Sound(DynamicLoadObject(CastEmitter.SpawnSoundString,class'Sound'));
 
 		if ( CastSound != None )
@@ -5487,13 +6062,32 @@ exec function DetectEnemy()
  */
 function FollowPlayer(Hero Player)
 {
+    local ClientController TargetController;
+    local string TargetName;
+    if ( Player == None || Player.bDeleteMe || Player == Pawn )
+        return;
+    TargetController = ClientController(Player.Controller);
+    if ( TargetController == None || TargetController.PSI == None )
+        return;
+    TargetName = string(TargetController.PSI.PlayName);
+    if ( PSI == None || !PSI.bParty || PartyMgr == None
+        || !PartyMgr.IsInParty(string(PSI.PlayName))
+        || !PartyMgr.IsInParty(TargetName) )
+    {
+        if ( myHud != None )
+            myHud.AddMessage(2,TargetName $ "没有加入队伍禁止跟随",class'Canvas'.Static.MakeColor(255,0,0));
+        return;
+    }
+
 	if ( Player != None && !Player.bDeleteMe ) 
 	{
 		// 设置追踪标志和目标
 		bTracePlayer = True;
 		TracePlayer = Player;
 		// 切换到追踪状态
-		GotoState('Tracing','Trace');
+		InteractTo=None;
+        MoveTimer=-1;
+        GotoState('Tracing');
 	}
 }
 
@@ -5543,10 +6137,7 @@ state Tracing extends Navigating
 	 * 重复状态
 	 * 重新进入追踪状态
 	 */
-	function RepeatState()
-	{
-		GotoState('Tracing','Trace');
-	}
+function RepeatState() {}
 	
 	/**
 	 * 玩家移动
@@ -5555,25 +6146,82 @@ state Tracing extends Navigating
 	 */
 	function PlayerMove(float DeltaTime)
 	{
-		// 如果追踪标志无效或目标不存在，返回导航状态
-		if (!bTracePlayer || TracePlayer == None) 
-		{
-			GotoState('Navigating');
-		}
-		else 
-		{
-			// 如果距离目标太远，移动到目标位置
-			if (!CanStop(VSize(TracePlayer.Location - Pawn.Location))) 
-			{
-				Destination = TracePlayer.Location;
-				RepeatState();
-			}
-			else
-				// 距离足够近，停止移动
-				Destination = Pawn.Location;
-			Super.PlayerMove(DeltaTime);
-		}
-	}
+    local ClientController TargetController;
+    local string TargetName;
+    local vector Diff;
+    local float Distance,TargetAlong,OwnMax,FollowSpeed,Scale;
+    if ( !bTracePlayer || TracePlayer == None || !class'SceneRegistry.LiveRegistry'.static.IsLiveActor(TracePlayer,Level) )
+    {
+        if ( Pawn != None && !Pawn.bDeleteMe )
+        {
+            Pawn.Acceleration = vect(0,0,0);
+            Pawn.Velocity = vect(0,0,0);
+            Destination = Pawn.Location;
+        }
+        GotoState('Navigating');
+        return;
+    }
+    TargetController = ClientController(TracePlayer.Controller);
+    if ( TargetController == None || TargetController.PSI == None )
+    {
+        if ( Pawn != None && !Pawn.bDeleteMe )
+        {
+            Pawn.Acceleration = vect(0,0,0);
+            Pawn.Velocity = vect(0,0,0);
+            Destination = Pawn.Location;
+        }
+        GotoState('Navigating');
+        return;
+    }
+    TargetName = string(TargetController.PSI.PlayName);
+    if ( PSI == None || !PSI.bParty || PartyMgr == None
+        || !PartyMgr.IsInParty(string(PSI.PlayName))
+        || !PartyMgr.IsInParty(TargetName) )
+    {
+        if ( Pawn != None && !Pawn.bDeleteMe )
+        {
+            Pawn.Acceleration = vect(0,0,0);
+            Pawn.Velocity = vect(0,0,0);
+            Destination = Pawn.Location;
+        }
+        GotoState('Navigating');
+        if ( myHud != None )
+            myHud.AddMessage(2,TargetName $ "没有加入队伍禁止跟随",class'Canvas'.Static.MakeColor(255,0,0));
+        return;
+    }
+
+    if (Pawn==None || Pawn.bDeleteMe || DeltaTime<=0) return;
+    if (IsRemotePlayerPawn()) { Super.PlayerMove(DeltaTime); return; }
+    if (PSI.CheckBuffDontAct())
+    {
+        aForward=0; aStrafe=0; Pawn.Acceleration=vect(0,0,0);
+        return;
+    }
+    Diff=TracePlayer.Location-Pawn.Location; Diff.Z=0;
+    Distance=VSize(Diff);
+    TargetAlong=FMax(0,TracePlayer.Velocity Dot Normal(Diff));
+    OwnMax=Character(Pawn).CurrentGroundSpeed;
+    if (OwnMax<=0) OwnMax=Pawn.Default.GroundSpeed;
+    if (Pawn.bIsWalking) OwnMax=OwnMax*Pawn.WalkingPct;
+    FollowSpeed=class'RemoteMotionSys.FollowPolicy'.static.Speed(Distance,TargetAlong,OwnMax,bMouseMove);
+    Destination=TracePlayer.Location; InteractTo=None;
+    bMouseMove=FollowSpeed>0; bKeyboardMove=False;
+    aForward=0; aStrafe=0;
+    if (bMouseMove)
+    {
+        RotatePawnTo(TracePlayer.Location);
+        aForward=Pawn.AccelRate;
+    }
+    // Keep original input/physics acceleration. Never write local Velocity.
+    Super.PlayerMove(DeltaTime);
+    if (bMouseMove)
+    {
+        Scale=1;
+        if (Pawn.bIsWalking) Scale=Pawn.WalkingPct;
+        FollowSpeed=FMin(FollowSpeed,Pawn.GroundSpeed*Scale);
+        Pawn.GroundSpeed=FollowSpeed/FMax(Scale,0.01);
+    }
+}
 	
 	/**
 	 * 更新旋转
@@ -5591,7 +6239,7 @@ state Tracing extends Navigating
 		else 
 		{
 			// 如果有加速度，旋转朝向目标
-			if (Pawn.Acceleration.X != 0 && Pawn.Acceleration.Y != 0)
+			if (Pawn.Acceleration.X != 0 || Pawn.Acceleration.Y != 0)
 				RotatePawnTo(TracePlayer.Location);
 			Super.UpdateRotation(DeltaTime,MaxPitch);
 		}
@@ -6126,7 +6774,11 @@ function SpiritCastEnd(string SpiritName);
  * 地图改变前事件
  * 在地图切换前调用，用于清理资源
  */
-event PreMapChange();
+event PreMapChange()
+{
+    if (Player!=None) class'RemoteMotionSys.QueueIndex'.static.ClearAll();
+    else class'RemoteMotionSys.QueueIndex'.static.Release(Self);
+}
 
 /**
  * 移除物品事件
@@ -6148,6 +6800,7 @@ function Pain()
 
 function bool Start2ndSkillAction(Skill Skill, actor Target, vector TargetLocation)
 {
+    if (class'BowAttackRuntime.RoundStore'.static.SupportActive(Self)) return False;
 	if( IsInState('SecondSkillAttacking') || !PSI.bIsAlive )
 		return False;
 
@@ -6170,6 +6823,9 @@ function bool Start2ndSkillAction(Skill Skill, actor Target, vector TargetLocati
 	if ( Target != None && (Target.bWorldGeometry || Target.IsA('TerrainInfo') || Target.IsA('StaticMeshActor')) )
 		Target = None;
 
+    // Discard older ordinary poses when a valid advanced action takes over.
+    // Later ordinary receive entries are blocked until the cast state ends.
+    if (IsRemotePlayerPawn()) ActionPool.Length=0;
 	SecondSkill = Skill;
 	SecondSkillTarget = Target;
 
@@ -6202,7 +6858,10 @@ state SecondSkillAttacking extends Attacking
 
 	function BeginState()
 	{
-		Super.BeginState();
+		// A received remote melee animation is not a request to restart
+        // walking physics, crouch setup, or the movement state.
+        if (!IsRemotePlayerPawn())
+            Super.BeginState();
 		if (!PSI.ArmState)
 			ToggleArmState();
 	}
@@ -6218,35 +6877,120 @@ state SecondSkillAttacking extends Attacking
 			SecondSkill(SecondSkill).bCharged = True;
 		}
 		Hero(Pawn).Arm();
-	}
 
-	function AnimEnd(int Channel)
-	{
-		Character(Pawn).bJustDamaged = False;
-		Super.AnimEnd(Channel);
-		GotoState('Navigating');
-	}
+    // Runs after the original EndState: the final mesh and weapon state now exist.
+    if ( Pawn != None && !Pawn.bDeleteMe
+        && Pawn.PrePivot.Z == Pawn.Default.PrePivot.Z + 200
+        && Character(Pawn) != None && !Character(Pawn).bIsDead )
+    {
+        Pawn.SetActionStage(STAGE_End);
+        Pawn.StopAnimating();
+        Character(Pawn).CHAR_TweenToWaiting(0.1);
+    }
+}
+
+function AnimEnd(int Channel)
+{
+    local name CompletedSequence;
+    local float CompletedFrame, CompletedRate;
+    local bool bHover;
+
+
+    if ( Pawn == None || Pawn.bDeleteMe || Character(Pawn) == None )
+        return;
+    if (IsRemotePlayerPawn())
+    {
+        if (Channel!=0 || !class'SceneRegistry.LiveRegistry'.static.IsRegistered(SecondSkill))
+            return;
+        Pawn.GetAnimParams(0,CompletedSequence,CompletedFrame,CompletedRate);
+        // A different clip or an unfinished tween is not this cast's completion.
+        if (CompletedSequence!=SecondSkill.AnimSequence || CompletedFrame<0 || Pawn.IsAnimating(0))
+            return;
+    }
+    bHover = Pawn.PrePivot.Z == Pawn.Default.PrePivot.Z + 200;
+    if ( bHover )
+    {
+        if ( Channel != 0 || SecondSkill == None )
+            return;
+        Pawn.GetAnimParams(Channel,CompletedSequence,CompletedFrame,CompletedRate);
+        // An idle/weapon tween or a hit reaction is not this cast's completion.
+        if ( CompletedSequence != SecondSkill.AnimSequence )
+            return;
+    }
+    if (IsRemotePlayerPawn() && Channel==0 && !bJustFired
+        && class'SceneRegistry.LiveRegistry'.static.IsRegistered(SecondSkill)
+        && (SecondSkill(SecondSkill).SkillType==1
+            || SecondSkill.SkillName=="RainbowArrow" || SecondSkill.SkillName=="PhantomFire"))
+        AnimStep(Channel);
+    Character(Pawn).bJustDamaged = False;
+    Super.AnimEnd(Channel);
+    GotoState('Navigating');
+}
 
 	function AnimStep(int Channel)
-	{
-		if(SecondSkill(SecondSkill).SkillType == 2)
-		{
-			if(Character(Pawn).IsAvatar())
-			{
-				BroadCast2ndSkillHit(SecondSkill, SecondSkillTarget);
-				SpawnExploEffect(SecondSkill, SecondSkillTarget, SecondSkillTarget.Location);
-			}
-		}
-		else if (SecondSkill(SecondSkill).SkillType == 1 || SecondSkill(SecondSkill).SkillName == "RainbowArrow" ||
-			SecondSkill(SecondSkill).SkillName == "PhantomFire" ) 
-		{
-			SpawnFireEffect(SecondSkill, SecondSkillTarget, HitActorLocation/*SecondSkillTarget.Location*/);
-		}
-		else if(SecondSkill(SecondSkill).SkillType == 3)
-		{
-			SpawnExploEffect(SecondSkill, SecondSkillTarget, Pawn.Location);
-		}
-	}
+{
+    local bool bLivePawn, bLiveTarget;
+
+
+
+    if (Level == None || Pawn == None)
+        return;
+    bLivePawn = class'SceneRegistry.LiveRegistry'.static.IsLiveActor(Pawn,Level);
+    bLiveTarget = class'SceneRegistry.LiveRegistry'.static.IsLiveActor(SecondSkillTarget,Level);
+    if (!bLivePawn)
+        return;
+    if (SecondSkillTarget != None && !bLiveTarget)
+    {
+        SecondSkillTarget = None;
+        return;
+    }
+    // Animation notifications may arrive while the pawn or target is being removed.
+    if ( bDeleteMe )
+        return;
+    if ( Character(Pawn) == None )
+        return;
+    if ( !class'SceneRegistry.LiveRegistry'.static.IsRegistered(SecondSkill) || SecondSkill(SecondSkill) == None )
+        return;
+    if ( SecondSkill(SecondSkill).SkillType == 1 && SecondSkillTarget == None )
+        return;
+
+    if ( SecondSkill(SecondSkill).SkillType == 2 )
+    {
+        if ( SecondSkillTarget == None )
+            return;
+        if ( Character(Pawn).IsAvatar() )
+        {
+            BroadCast2ndSkillHit(SecondSkill, SecondSkillTarget);
+            bLivePawn = class'SceneRegistry.LiveRegistry'.static.IsLiveActor(Pawn,Level);
+            bLiveTarget = class'SceneRegistry.LiveRegistry'.static.IsLiveActor(SecondSkillTarget,Level);
+            if (!bLivePawn)
+                return;
+            if (SecondSkillTarget != None && !bLiveTarget)
+            {
+                SecondSkillTarget = None;
+                return;
+            }
+            // The hit callback can change state or invalidate the target.
+            if ( bDeleteMe || !IsInState('SecondSkillAttacking') )
+                return;
+            if ( !class'SceneRegistry.LiveRegistry'.static.IsRegistered(SecondSkill) || SecondSkill(SecondSkill) == None || SecondSkillTarget == None )
+                return;
+            SpawnExploEffect(SecondSkill, SecondSkillTarget, SecondSkillTarget.Location);
+        }
+    }
+    else if ( SecondSkill(SecondSkill).SkillType == 1 || SecondSkill(SecondSkill).SkillName == "RainbowArrow" ||
+        SecondSkill(SecondSkill).SkillName == "PhantomFire" )
+    {
+        if (bJustFired)
+            return;
+        bJustFired = True;
+        SpawnFireEffect(SecondSkill, SecondSkillTarget, HitActorLocation);
+    }
+    else if ( SecondSkill(SecondSkill).SkillType == 3 )
+    {
+        SpawnExploEffect(SecondSkill, SecondSkillTarget, Pawn.Location);
+    }
+}
 
 	function StartSecondSkill()
 	{
@@ -6272,16 +7016,49 @@ state SecondSkillAttacking extends Attacking
 
 	function PlaySecondSkill()
 	{
+    local Pawn MovePawn;
+    local vector MoveVelocity,MoveAcceleration,MoveDestination;
+    local float MoveDesired,MoveGroundSpeed;
+    local Actor.EPhysics MovePhysics;
+    local bool HoldMovement,MoveMouse,MoveSync;
+
 		local vector TargetLoc;
 
 		local float TotalFrames;
 		local float DefaultRate;
 		local float DesiredAnimTime;
 		local float AnimRate;
+    HoldMovement=IsRemotePlayerPawn() && Pawn!=None && !Pawn.bDeleteMe
+        && PSI!=None && !PSI.bDeleteMe && PSI.bIsAlive && !Character(Pawn).bIsDead
+        && !IsRemoteHardControlActive() && !IsRemoteSkillDashLockActive();
+    if (HoldMovement)
+    {
+        MovePawn=Pawn; MovePhysics=Pawn.Physics;
+        MoveVelocity=Pawn.Velocity; MoveAcceleration=Pawn.Acceleration;
+        MoveDesired=Pawn.DesiredSpeed; MoveGroundSpeed=Pawn.GroundSpeed;
+        MoveDestination=Destination; MoveMouse=bMouseMove; MoveSync=bSyncingPosition;
+        Pawn.bCanStrafe=True;
+    }
 
+
+
+		bJustFired = False; // Reset once for each cast, before animation starts.
 
 		if(SecondSkill == None)
-			return;
+			{
+    if (HoldMovement && Pawn==MovePawn && !Pawn.bDeleteMe
+        && Pawn.Physics==MovePhysics && PSI!=None && !PSI.bDeleteMe && PSI.bIsAlive
+        && !Character(Pawn).bIsDead && !IsRemoteHardControlActive()
+        && !IsRemoteSkillDashLockActive())
+    {
+        Pawn.Velocity.X=MoveVelocity.X; Pawn.Velocity.Y=MoveVelocity.Y;
+        Pawn.Acceleration.X=MoveAcceleration.X; Pawn.Acceleration.Y=MoveAcceleration.Y;
+        Pawn.DesiredSpeed=MoveDesired; Pawn.GroundSpeed=MoveGroundSpeed;
+        Pawn.bCanStrafe=True; Destination=MoveDestination;
+        bMouseMove=MoveMouse; bSyncingPosition=MoveSync;
+    }
+        return;
+    }
 
 		TargetLoc = HitActorLocation;
 		if(SecondSkillTarget != None)
@@ -6337,7 +7114,19 @@ state SecondSkillAttacking extends Attacking
 			AnimRate = 1;
 
 		Character(Pawn).PlayAnimAction(SecondSkill.AnimSequence, -1,AnimRate,0.3);
-	}
+        if (IsRemotePlayerPawn() && PSI!=None) class'RemoteMotionSys.QueueIndex'.static.NoteAction(Self,PSI.PanID,2,SecondSkill.AnimSequence);
+	    if (HoldMovement && Pawn==MovePawn && !Pawn.bDeleteMe
+        && Pawn.Physics==MovePhysics && PSI!=None && !PSI.bDeleteMe && PSI.bIsAlive
+        && !Character(Pawn).bIsDead && !IsRemoteHardControlActive()
+        && !IsRemoteSkillDashLockActive())
+    {
+        Pawn.Velocity.X=MoveVelocity.X; Pawn.Velocity.Y=MoveVelocity.Y;
+        Pawn.Acceleration.X=MoveAcceleration.X; Pawn.Acceleration.Y=MoveAcceleration.Y;
+        Pawn.DesiredSpeed=MoveDesired; Pawn.GroundSpeed=MoveGroundSpeed;
+        Pawn.bCanStrafe=True; Destination=MoveDestination;
+        bMouseMove=MoveMouse; bSyncingPosition=MoveSync;
+    }
+}
 
 	
 	function BroadCast2ndSkillAct(Skill Skill, actor Target)
@@ -6492,15 +7281,45 @@ state Knockbacking extends Navigating
  */
 event NetRecv_Start2ndSkillAct(Skill Skill, character Target, vector TargetLoc)
 {
+    local Pawn MovePawn;
+    local vector MoveVelocity,MoveAcceleration,MoveDestination;
+    local float MoveDesired,MoveGroundSpeed;
+    local Actor.EPhysics MovePhysics;
+    local bool HoldMovement,MoveMouse,MoveSync;
+    HoldMovement=IsRemotePlayerPawn() && Pawn!=None && !Pawn.bDeleteMe
+        && PSI!=None && !PSI.bDeleteMe && PSI.bIsAlive && !Character(Pawn).bIsDead
+        && !IsRemoteHardControlActive() && !IsRemoteSkillDashLockActive();
+    if (HoldMovement)
+    {
+        MovePawn=Pawn; MovePhysics=Pawn.Physics;
+        MoveVelocity=Pawn.Velocity; MoveAcceleration=Pawn.Acceleration;
+        MoveDesired=Pawn.DesiredSpeed; MoveGroundSpeed=Pawn.GroundSpeed;
+        MoveDestination=Destination; MoveMouse=bMouseMove; MoveSync=bSyncingPosition;
+        Pawn.bCanStrafe=True;
+    }
+
+
 	
 	
 	if ( Skill != None ) 
 	{
 		Character(Pawn).bJustDamaged = False;
-		Pawn.Acceleration = vect(0,0,0);
+		if (!IsRemotePlayerPawn() || IsRemoteHardControlActive() || IsRemoteDashSkillName(Skill.SkillName))
+            Pawn.Acceleration = vect(0,0,0);
 		BeginRemoteSkillDashLock(Skill.SkillName, TargetLoc, 0.55);
 		Start2ndSkillAction(Skill, Target, TargetLoc);
 	}
+    if (HoldMovement && Pawn==MovePawn && !Pawn.bDeleteMe
+        && Pawn.Physics==MovePhysics && PSI!=None && !PSI.bDeleteMe && PSI.bIsAlive
+        && !Character(Pawn).bIsDead && !IsRemoteHardControlActive()
+        && !IsRemoteSkillDashLockActive())
+    {
+        Pawn.Velocity.X=MoveVelocity.X; Pawn.Velocity.Y=MoveVelocity.Y;
+        Pawn.Acceleration.X=MoveAcceleration.X; Pawn.Acceleration.Y=MoveAcceleration.Y;
+        Pawn.DesiredSpeed=MoveDesired; Pawn.GroundSpeed=MoveGroundSpeed;
+        Pawn.bCanStrafe=True; Destination=MoveDestination;
+        bMouseMove=MoveMouse; bSyncingPosition=MoveSync;
+    }
 }
 
 /**
@@ -7034,6 +7853,9 @@ event NetRecv_Transformation(bool bTrans)
 {
 	local Skill skill;
 	local int i;
+    // Transformation has a separate receive entry but the same advanced priority.
+    if (bTrans && IsRemotePlayerPawn()) ActionPool.Length=0;
+
 	if( bTrans ) 
 	{
 		if( Character(Pawn).IsAvatar() ) 

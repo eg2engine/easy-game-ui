@@ -20,7 +20,7 @@ static function EnchantBox Create(Object Owner, ClientController OwnerController
 {
 	local EnchantBox instance;
 
-	instance = new(Owner) class'EnchantBox';
+	instance = new(Owner) class'ObjectStore.OwnedEnchantBox';
 	instance.OwnerController = OwnerController;
 
 	return instance;
@@ -85,7 +85,7 @@ function AddEnchant(name enchant_name)
 
 
 	// info instance�� �����Ѵ�. (duration�� ���� disenchanttime�� ��´�.)
-	inst				= new(Self) class'EnchantInfoInstance';
+	inst				= new(Self) class'ObjectStore.OwnedEnchant';
 	inst.Info			= info;
 	inst.EnchantTime	= OwnerController.Level.TimeSeconds;
 	if(info.Duration == 0)
@@ -109,16 +109,19 @@ function AddEnchant(name enchant_name)
 function RemoveEnchant(name enchant_name)
 {
 	local int idx;
+    local EnchantInfoInstance OldInstance;
 
 	idx = FindIndex(enchant_name);
 	if(idx < 0)
 		return;
 
-	EnchantInfoMap[idx] = None;
+	OldInstance=EnchantInfoMap[idx];
+    EnchantInfoMap[idx] = None;
 	EnchantInfoMap.Remove(idx,1);
 
 	// notify ui
 	OwnerController.OnUpdateUI_EnchantBox();
+    class'ObjectStore.UILifetime'.static.ReleaseEnchant(OldInstance,Self);
 }
 
 defaultproperties

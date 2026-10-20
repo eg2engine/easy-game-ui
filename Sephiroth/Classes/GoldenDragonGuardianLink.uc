@@ -200,15 +200,15 @@ simulated function bool UpdatePoseBlend(float DT)
 
     Dragon.GetAnimParams(0, BaseAnim, BaseFrame, BaseRate);
     Dragon.GetAnimParams(1, OrbitAnim, OrbitFrame, OrbitRate);
-    if (!bPoseLayersReady || BaseAnim != 'RunFlowV5')
+    if (!bPoseLayersReady || BaseAnim != 'RunFlowFx')
     {
-        Dragon.LoopAnim('RunFlowV5', 1.27, 0.15, 0);
+        Dragon.LoopAnim('RunFlowFx', 1.27, 0.15, 0);
         AnimStartCount++;
     }
-    if (!bPoseLayersReady || OrbitAnim != 'OrbitCrawlV17')
+    if (!bPoseLayersReady || OrbitAnim != 'OrbitCrawlFx_')
     {
         Dragon.AnimBlendParams(1, 0, 0, 0, '', False);
-        Dragon.LoopAnim('OrbitCrawlV17', 2.0 / FMax(OrbitPeriod, 1), 0, 1);
+        Dragon.LoopAnim('OrbitCrawlFx_', 2.0 / FMax(OrbitPeriod, 1), 0, 1);
         Dragon.EnableChannelNotify(1, 0);
         AnimStartCount++;
     }
@@ -231,7 +231,7 @@ simulated function bool UpdatePoseBlend(float DT)
     PoseAlpha = FClamp(TargetAlpha + (Error + Temp) * E, 0, 1);
     PoseAlphaVelocity = (PoseAlphaVelocity - W * Temp) * E;
     Dragon.AnimBlendParams(1, PoseAlpha, 0, 0, '', False);
-    LastAnimation = 'RunFlowV5';
+    LastAnimation = 'RunFlowFx';
     LastPlaybackRate = 1.27;
     return True;
 }
@@ -306,9 +306,9 @@ simulated function UpdateDragon(float DT)
 
             bGuardAssetReady = Dragon.HasAnim('Run') && Dragon.HasAnim('Idle');
 
-            bSwimAssetReady = Dragon.HasAnim('OrbitCrawlV17');
+            bSwimAssetReady = Dragon.HasAnim('OrbitCrawlFx_');
 
-            bRunAssetReady = Dragon.HasAnim('RunFlowV5');
+            bRunAssetReady = Dragon.HasAnim('RunFlowFx');
 
             if (!bGuardAssetReady) Dragon.LinkMesh(SavedMesh);
 
@@ -613,7 +613,7 @@ simulated function UpdateDragon(float DT)
 
         {
 
-            WantedAnim = 'OrbitCrawlV17';
+            WantedAnim = 'OrbitCrawlFx_';
 
             AnimationRate = 2.0 / FMax(OrbitPeriod, 1);
 
@@ -624,7 +624,7 @@ simulated function UpdateDragon(float DT)
     // Keep original Run for the initial forward-axis calibration and asset fallback.
     if (WantedAnim == 'Run' && bRunAssetReady && bHeadingCalibrated)
     {
-        WantedAnim = 'RunFlowV5';
+        WantedAnim = 'RunFlowFx';
         // Speed up the entire gait, keeping body and paws on the same phase.
         if (!bOrbiting && !bReturning) AnimationRate = 1.27;
     }
