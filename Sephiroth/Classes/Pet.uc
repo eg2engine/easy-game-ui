@@ -147,9 +147,10 @@ function SetPosition(INT Position)
 
 function PostBeginPlay()
 {
-	Super.PostBeginPlay();	
+	Super(Actor).PostBeginPlay();
 	
-	SetTimer(1,True);
+	// Pet.Timer is empty; retain original startup for derived types.
+    if (Class != class'Pet') SetTimer(1,True);
 }
 
 function Timer()

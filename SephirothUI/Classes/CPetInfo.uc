@@ -323,6 +323,9 @@ function bool OnKeyEvent(Interaction.EInputKey Key, Interaction.EInputAction Act
 
 function bool PushComponentBool(int CmpId)
 {
+    if (CmpId == 4)
+        return !class'UIVisibility.VisibilitySettings'.default.bHidePetUI;
+
 	switch (CmpId) {
 		case 4: return SephirothInterface(Parent).m_PetMain != None;
 	}
@@ -331,6 +334,14 @@ function bool PushComponentBool(int CmpId)
 
 function NotifyComponent(int CmpId,int NotifyId,optional string Command)
 {
+    if (NotifyId == 100)
+    {
+        if (Command == "Checked")
+            class'UIVisibility.VisibilitySettings'.static.SaveVisibility(100,True);
+        else if (Command == "UnChecked")
+            class'UIVisibility.VisibilitySettings'.static.SaveVisibility(100,False);
+    }
+
 	if (NotifyId == BN_Exit)
 		Parent.NotifyInterface(Self,INT_Close);
 	else if(NotifyId == CB_PetFace)

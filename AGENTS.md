@@ -1,5 +1,7 @@
 # 武器光效开发约定
 
+- 累计客户端模块、源码还原和隔离编译检查见 `docs/CLIENT_SYNC.md`；`tools/validate_client_sources.py` 的校验包不能部署。原生补丁配方见 `native/README.md`。本仓库提交通过PR审核，不直接合并。
+
 - 后续设计直接修改正式项目源码；不要在根目录继续创建 `WeaponFx_vNN`、`BowModelTest_vNN` 等过程目录。
 - 所有本地过程产物（旧版本、备份、试验源码、截图、编译日志、临时交付包）放在 `.weapon-fx-work/`，该目录已加入 Git 忽略。
 - 正式规则和部署说明维护在 `docs/WEAPON_EFFECTS.md`，门槛检查脚本维护在 `tests/Verify-WeaponFxGate.ps1`。

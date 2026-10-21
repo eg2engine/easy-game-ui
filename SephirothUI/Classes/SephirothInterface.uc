@@ -334,6 +334,10 @@ function SetDefaultUIPosition()
 
 function OnInit()
 {
+    local Actor Target;
+
+    local Actor UI;
+
 	IU = new(None) class'InterfaceUtil';
 	SkillInfo = CInfoBox(AddInterface("SephirothUI.CSkillInfoBox"));
 	ItemInfo = CInfoBox(AddInterface("SephirothUI.CItemInfoBox"));
@@ -408,6 +412,12 @@ function OnInit()
 	timeQuest = PlayerOwner.Level.TimeSeconds;
 
 //	aReceivedPSI.Empty();
+
+    UI = Self;
+    class'UIVisibility.VisibilitySettings'.static.RestoreUI(SephirothInterface(UI));
+
+    Target = Self;
+    class'UIVisibility.VisibilitySettings'.static.InstallBuffUI(SephirothInterface(Target));
 }
 
 function OnFlush()
@@ -513,6 +523,10 @@ function ShowMainInterface()
 {
 	local int SkillLevels;
 	local int i;
+
+    if (class'UIVisibility.VisibilitySettings'.default.bHideShortcutUI) return;
+
+
 
 	if ( MainHud == None ) 
 	{
@@ -992,6 +1006,8 @@ function HideSimpleInterface()
 
 function ShowGaugeInterface()
 {
+    if (class'UIVisibility.VisibilitySettings'.default.bHideShortcutUI) return;
+
 	if ( GaugeHud == None ) 
 	{
 		if( UIType == Type1 )
@@ -1917,6 +1933,9 @@ function HidePetInterface()
 
 function ShowPetFace()
 {
+    if (class'UIVisibility.VisibilitySettings'.default.bHidePetUI)
+        return;
+
 	if( m_PetMain == None /*&& bShowPetFace*/ )
 		m_PetMain = CPetMain(AddInterface("SephirothUI.CPetMain"));
 	if( m_PetMain != None )
@@ -2456,6 +2475,11 @@ function ChangeUIType(int Type)		//modified by yj
 
 function ChangeMinimapType(bool bPin)
 {
+    local Actor UI;
+    UI = Self;
+    if (SephirothInterface(UI).m_MiniMap == None || SephirothInterface(UI).m_MiniMap.bDeleteMe)
+        return;
+
 	m_MiniMap.ChangeMiniMapDisplayMode();		//2009.10.26.Sinhyub
 	HideMinimap();
 	ShowMinimap();
@@ -2673,6 +2697,25 @@ function bool OnKeyEvent(Interaction.EInputKey Key,Interaction.EInputAction Acti
 {
 
 	local string Resolution;
+
+    local Actor Target;
+    local SephirothInterface UI;
+    if (Key == IK_ScrollLock)
+    {
+        Target = Self;
+        UI = SephirothInterface(Target);
+        if (UI != None && !UI.bDeleteMe && Action == IST_Press && !UI.bInputValidRegionOn)
+        {
+            if (UI.PlayerOwner != None && UI.PlayerOwner.Player != None && UI.Controller != None)
+            {
+                if (!UI.PlayerOwner.Player.Console.bTyping && !UI.Controller.bProcessingKeyType)
+                    class'UIVisibility.VisibilitySettings'.static.ToggleShortcutUI(UI);
+            }
+        }
+        // Never reach the old resolution-dependent layout cycle.
+        return True;
+    }
+
 
 	if ( bInputValidRegionOn )	
 	{

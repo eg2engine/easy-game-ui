@@ -49,8 +49,8 @@ function OnInit()
 	SetComponentNotify(Components[13],BN_Portal,Self);
 	SetComponentNotify(Components[14],BN_Quest,Self);
 
-	BgColor = new(None) class'ConstantColor';
-	BgBlend = new(None) class'FinalBlend';
+	if (BgColor == None) BgColor = new(Self) class'ObjectStore.OwnedConstant';
+	if (BgBlend == None) BgBlend = new(Self) class'ObjectStore.OwnedBlend';
 
 	BgBlend.Material = BgColor;
 	BgBlend.FrameBufferBlending = BgBlend.EFrameBufferBlending.FB_AlphaBlend;

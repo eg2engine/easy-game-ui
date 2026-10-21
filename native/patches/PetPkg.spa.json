@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "path": "Animations/PetPkg.spa",
+  "source_size": 296765083,
+  "source_sha256": "76f8a2dacb1477f1314f72a33ff121412db377d86c5e413d0331ff03b68ad6a6",
+  "target_size": 296765083,
+  "target_sha256": "3f190a58e561392c3508b11e2acaa79a38337baa20393fdeca51e0a98b6ee840",
+  "replacements": [
+    {
+      "offset": 6296,
+      "before": "61a375",
+      "after": "715a8d"
+    },
+    {
+      "offset": 15053,
+      "before": "de58",
+      "after": "ce8d"
+    }
+  ]
+}

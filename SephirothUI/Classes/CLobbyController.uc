@@ -48,7 +48,7 @@ event NetRecv_NewCharacterResult(string Result)
 }
 
 event NetRecv_StartPlayResult(string Result)
-{
+{ class'BowAttackRuntime.DefinitionStore'.static.ClearAll();
 	CLobby(myHud).StartPlayResult(Result);
 }
 

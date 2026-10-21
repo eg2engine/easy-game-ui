@@ -150,9 +150,11 @@ function OnInit()
 	SetComponentNotify(Components[3],BN_ScaleUp,Self);
 	SetComponentNotify(Components[4],BN_ScaleDown,Self);	
 
-	AlphaScale = new(None) class'TexScaler';
-	MinimapCombiner = new(None) class'Combiner';
-	MinimapBlend = new(None) class'FinalBlend';
+    if (AlphaScale == None) AlphaScale=new(Self) class'ObjectStore.OwnedScaler';
+
+    if (MinimapCombiner == None) MinimapCombiner=new(Self) class'ObjectStore.OwnedCombiner';
+
+    if (MinimapBlend == None) MinimapBlend=new(Self) class'ObjectStore.OwnedBlend';
 
 	Scale = FClamp(Scale, MinScale, MaxScale);
 	bNeedLayoutUpdate = true;
@@ -160,7 +162,8 @@ function OnInit()
 
 function OnFlush()
 {
-	FlushDynamicTextures();
+	class'ObjectStore.UILifetime'.static.ReleaseMap(MinimapBlend,MinimapCombiner,AlphaScale,Self);
+    FlushDynamicTextures();
 	SaveConfig();
 }
 
@@ -208,30 +211,46 @@ function OnPreRender(Canvas C)
 	local Material MinimapTexture;
 	local color TypeColor;
 	local string MapName;
+    local GameManager GM;
+    local SephirothPlayer PC;
+    local ClientController HC;
+    local PartyManager PM;
+    local vector PlayerLocation;
+    local float MapFactor;
+    local int PlayerLevel;
+    local bool InParty;
+    PC=SephirothPlayer(PlayerOwner);
+    if (PC == None || PC.bDeleteMe || PC.Pawn == None || PC.Pawn.bDeleteMe || PC.PSI == None
+        || PC.Level == None || AlphaScale == None || MinimapCombiner == None || MinimapBlend == None || Scale <= 0) return;
+    GM=GameManager(PC.Level.Game); PM=PC.PartyMgr;
+    if (GM == None || PM == None) return;
+    PlayerLocation=PC.Pawn.Location;
+    PlayerLevel=PC.PSI.PlayLevel; InParty=PC.PSI.bParty;
+    MapFactor=512.0 / 65024.0 / Scale;
 
 	if(true)
-		Yaw = 0; //PlayerOwner.Rotation.Yaw + 16384;
+		Yaw = 0;
 	else
 		Yaw = -PlayerOwner.Rotation.Yaw - 16384;
 
-//	Components[5].Rotation = PlayerOwner.Pawn.Rotation.Yaw + 16384; //Yaw;
-	Components[5].Rotation = PlayerOwner.Rotation.Yaw + 16384; // �ü� ȸ��
+
+	Components[5].Rotation = PlayerOwner.Rotation.Yaw + 16384;
 
 
-	/*This is not a good place to call ChangeMiniMapDisplayMode(), Sorry for do this but I have not enough time to replace it. -2009.10.26.Sinhyub*/
-	//ChangeMiniMapDisplayMode();
 
-	/* MapPosition = (Translated Player Position +/- Scaled Visible Radius) / MapSize; */
-	MapStartX = (PlayerOwner.Pawn.Location.X + 40*MapSize - VisibleRadius * Scale) / MapSize;
-	MapStartY = (PlayerOwner.Pawn.Location.Y + 40*MapSize - VisibleRadius * Scale) / MapSize;
-	MapEndX = (PlayerOwner.Pawn.Location.X + 40*MapSize + VisibleRadius * Scale) / MapSize;
-	MapEndY = (PlayerOwner.Pawn.Location.Y + 40*MapSize + VisibleRadius * Scale) / MapSize;
+
+
+
+	MapStartX = (PlayerLocation.X + 40*MapSize - VisibleRadius * Scale) / MapSize;
+	MapStartY = (PlayerLocation.Y + 40*MapSize - VisibleRadius * Scale) / MapSize;
+	MapEndX = (PlayerLocation.X + 40*MapSize + VisibleRadius * Scale) / MapSize;
+	MapEndY = (PlayerLocation.Y + 40*MapSize + VisibleRadius * Scale) / MapSize;
 
 	count = 0;
 	for (i=MapStartX;i<=MapEndX;i++) {
 		for (j=MapStartY;j<=MapEndY;j++) {
 
-			// keios
+
 			if(CheckMap(i, j))
 				MapName = "Minimap.minimap" $ i $ "-" $ j;
 			else
@@ -241,8 +260,8 @@ function OnPreRender(Canvas C)
 			if (MinimapTexture == None)
 				continue;
 
-			PlayerOffsetX = (PlayerOwner.Pawn.Location.X - (i-40)*MapSize) * TexSize / MapSize;
-			PlayerOffsetY = (PlayerOwner.Pawn.Location.Y - (j-40)*MapSize) * TexSize / MapSize;
+			PlayerOffsetX = (PlayerLocation.X - (i-40)*MapSize) * TexSize / MapSize;
+			PlayerOffsetY = (PlayerLocation.Y - (j-40)*MapSize) * TexSize / MapSize;
 			TexStartX = rcWindow.X + Radius - PlayerOffsetX / Scale;
 			TexStartY = rcWindow.Y + Radius - PlayerOffsetY / Scale;
 			TexEndX = TexStartX + TexSize / Scale;
@@ -290,7 +309,7 @@ function OnPreRender(Canvas C)
 			AlphaScale.VOffset = - ( V/TexSize - ( V2/Radius/2.0) ) * Radius * 2.0;
 			if( AlphaScale.VOffset < 0.0 ) 
 				AlphaScale.VOffset = AlphaScale.VOffset / AlphaScale.VScale;
-			if(bMinimapType)		// 2009.10.26.Sinhyub
+			if(bMinimapType)
 				AlphaScale.Material = None;
 			else
 				AlphaScale.Material = TextureResources[0].Resource;
@@ -299,17 +318,17 @@ function OnPreRender(Canvas C)
 			MinimapCombiner.CombineOperation = CO_Use_Color_From_Material1;
 			MinimapCombiner.AlphaOperation = AO_Use_Alpha_From_Material2;
 			MinimapCombiner.Material1 = MinimapTexture;
-			if( bMinimapType )		// 2009.10.26.Sinhyub
+			if( bMinimapType )
 				MinimapCombiner.Material2 = None;
 			else
-				MinimapCombiner.Material2 = AlphaScale;		//modified by yj   //�ϴ��� Rot ����� �������� �����Ƿ� AlphaBlend�� ���Ƶд�.
+				MinimapCombiner.Material2 = AlphaScale;
 
 			MinimapBlend.FrameBufferBlending = FB_AlphaBlend;
 			MinimapBlend.Material = MinimapCombiner;
 			MinimapBlend.ZWrite = false;
 			MinimapBlend.ZTest = false;
 
-			if(YL < 0)	// ��ü�Ҹ��� ��� �ѷ��ִ� ���� ���� �ӽ�-_-����
+			if(YL < 0)
 				continue;
 
 			X = X-0.5; XL = XL + 0.5;
@@ -333,22 +352,22 @@ function OnPreRender(Canvas C)
 
 	if (Scale < 3.0)
 	{
-		// Render creature/monster spot
-		for (i=0;i<GameManager(Level.Game).Creatures.Length;i++)
+
+		for (i=0;i<GM.Creatures.Length;i++)
 		{
-			Creature = GameManager(Level.Game).Creatures[i];
+			Creature = GM.Creatures[i];
 			if (Creature != None && !Creature.bDeleteMe)
 			{
 				if (Creature.IsA('Monster'))
 				{
 					MnstLV = Monster(Creature).GetPlayLevel();
-					DiffLV = MnstLV - SephirothPlayer(PlayerOwner).PSI.PlayLevel;
+					DiffLV = MnstLV - PlayerLevel;
 
-					//add neive : ���� ���� ǥ�� ------------------------------------------
-					// ��ȫ FColor(196, 136, 255);
-					// ���� FColor(128, 128, 128);
 
-					if(SephirothPlayer(PlayerOwner).PSI.bParty)
+
+
+
+					if(InParty)
 					{
 						if(DiffLV < -130)
 							TypeColor = ColorDiffF;
@@ -379,14 +398,14 @@ function OnPreRender(Canvas C)
 							TypeColor = ColorDiffA;
 					}
 
-					Loc = (Creature.Location - PlayerOwner.Pawn.Location) * TexSize / MapSize / Scale;
+					Loc = (Creature.Location - PlayerLocation) * MapFactor;
 					class'CNativeInterface'.static.DrawPointRotated(Center.X, Center.Y, Loc.X, Loc.Y, Yaw, 2, TypeColor, Rgn.X, Rgn.Y, Rgn.W, Rgn.H, true);
-					//---------------------------------------------------------------------
+
 				}
 				else if (Creature.IsA('Npc'))
 				{
 					TypeColor = C_Npc;
-					Loc = (Creature.Location - PlayerOwner.Pawn.Location) * TexSize / MapSize / Scale;
+					Loc = (Creature.Location - PlayerLocation) * MapFactor;
 
 					if(Creature.nSymbol == 0)
 					{
@@ -396,7 +415,7 @@ function OnPreRender(Canvas C)
 					{
 						C.SetPos(Center.X + Loc.X - 10, Center.Y + Loc.Y - 12);
 
-						switch(Creature.nSymbol)	// NPC symbol npc �ɹ� ǥ��
+						switch(Creature.nSymbol)
 						{
 						case 1: C.DrawTile(TextureResources[12].Resource,19,24,0,0,19,24); break;
 						case 2: C.DrawTile(TextureResources[13].Resource,19,24,0,0,19,24); break;
@@ -410,73 +429,76 @@ function OnPreRender(Canvas C)
 				else if (Creature.IsA('MatchStone'))
 				{
 					TypeColor = C_MatchStone;
-					Loc = (Creature.Location - PlayerOwner.Pawn.Location) * TexSize / MapSize / Scale;
+					Loc = (Creature.Location - PlayerLocation) * MapFactor;
 					class'CNativeInterface'.static.DrawPointRotated(Center.X, Center.Y, Loc.X, Loc.Y, Yaw, 2, TypeColor, Rgn.X, Rgn.Y, Rgn.W, Rgn.H, true);
 				}
 			}
 		}
 
-		for (i=0;i<GameManager(Level.Game).Heroes.Length;i++) {
-			Hero = GameManager(Level.Game).Heroes[i];
-			if (Hero != None && !Hero.bDeleteMe && Hero.Controller != None && !ClientController(Hero.Controller).IsTransparent() && !SephirothPlayer(PlayerOwner).PartyMgr.IsInParty(string(ClientController(Hero.Controller).PSI.PlayName))) {
-				Loc = (Hero.Location - PlayerOwner.Pawn.Location) * TexSize / MapSize / Scale;
+		for (i=0;i<GM.Heroes.Length;i++) {
+			Hero = GM.Heroes[i];
+			HC=None;
+            if (Hero != None && !Hero.bDeleteMe) HC=ClientController(Hero.Controller);
+            if (HC != None && !HC.bDeleteMe && HC.PSI != None && !HC.IsTransparent()
+                && !PM.IsInParty(string(HC.PSI.PlayName))) {
+				Loc = (Hero.Location - PlayerLocation) * MapFactor;
 				class'CNativeInterface'.static.DrawPointRotated(Center.X, Center.Y, Loc.X, Loc.Y, Yaw, 2, C_Hero, Rgn.X, Rgn.Y, Rgn.W, Rgn.H, true);
 			}
 		}
 	}
 
-	// Render party member spot
-	if (SephirothPlayer(PlayerOwner).PSI.bParty) {
-		for (i=1;i<SephirothPlayer(PlayerOwner).PartyMgr.Members.Length;i++) {
-			PartyPlayer = SephirothPlayer(PlayerOwner).PartyMgr.Members[i];
-			Loc = (PartyPlayer.Location - PlayerOwner.Pawn.Location) * TexSize / MapSize / Scale;
+
+	if (InParty) {
+		for (i=1;i<PM.Members.Length;i++) {
+			PartyPlayer = PM.Members[i];
+			Loc = (PartyPlayer.Location - PlayerLocation) * MapFactor;
 			class'CNativeInterface'.static.DrawPointRotated(Center.X, Center.Y, Loc.X, Loc.Y, Yaw, 2, C_Party, Rgn.X, Rgn.Y, Rgn.W, Rgn.H, true);
 		}
 	}
 
-	//if (bShowActiveItems) {
-	//	if (PlayerOwner.Level.TimeSeconds - ActiveItemLastShownTime > 10.0) {
-	//		bShowActiveItems = false;
-	//		ActiveItemLastShownTime = 0;
-	//	}
-	//	else {
-	//		for (i=0;i<SephirothPlayer(PlayerOwner).ActiveItems.Length;i++) {
-	//			ActiveItem = SephirothPlayer(PlayerOwner).ActiveItems[i];
-	//			Loc2.X = ActiveItem.PosX;
-	//			Loc2.Y = ActiveItem.PosY;
-	//			Loc = Loc2 - PlayerOwner.Pawn.Location;
-	//			Loc.Z = 0;
-	//			Distance = VSize(Loc);
-	//			Yaw2 = Rotator(Loc).Yaw;
-	//			Loc = Loc * TexSize / MapSize / Scale;
-	//			Loc2.X = Loc.X * Cos(2 * PI * Yaw / 65536.) - Loc.Y * Sin(2 * PI * Yaw / 65536.);
-	//			Loc2.Y = Loc.X * Sin(2 * PI * Yaw / 65536.) + Loc.Y * Cos(2 * PI * Yaw / 65536.);
-	//			Loc = Loc2;
-	//			if (IsPosInsideCircleRegion(Rgn,rcWindow.X+rcWindow.W/2+Loc.X,rcWindow.Y+rcWindow.H/2+Loc.Y)) {
-	//				C.SetRenderStyleAlpha();
-	//				C.SetPos(Center.X+Loc.X-16,Center.Y+Loc.Y-16);
-	//				C.DrawTile(ActiveItemMat,32,32,0,0,32,32);
-	//				if (ActiveItem.OwnerName != "") {
-	//					C.SetPos(Center.X+Loc.X,Center.Y+Loc.Y);
-	//					C.KTextFormat = ETextAlign.TA_BottomCenter;
-	//					C.DrawKoreanText(ActiveItem.OwnerName,Center.X+Loc.X-100,Center.Y+Loc.Y-20,200,20);
-	//				}
-	//			}
-	//			else {
-	//				if (Distance < 3000)
-	//					DistanceColor = 255;
-	//				else if (Distance > 100000)
-	//					DistanceColor = 128;
-	//				else
-	//					DistanceColor = 255.0 - 128.0 * (Distance - 3000.0) / (100000.0 - 3000.0);
 
-	//				C.SetPos(Center.X-4, Center.Y-44);
-	//				C.SetRenderStyleAlpha();
-	//				C.DrawTileRotated(ActiveItemMatArrow, 8, 44, 0, 0, 8, 44, Center.X, Center.Y, Yaw+Yaw2+16384);
-	//			}
-	//		}
-	//	}
-	//}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	C.DrawColor = OldColor;
 
@@ -776,11 +798,13 @@ final function Texture LoadDynamicTexture(string TextureName)
 final function FlushDynamicTextures()
 {
 	local int i,count;
+    local Viewport VP;
+    if (PlayerOwner != None && !PlayerOwner.bDeleteMe) VP=Viewport(PlayerOwner.Player);
 
 	count = DynamicTextures.Length;
 	for (i=0;i<DynamicTextures.Length;i++) {
-		if (DynamicTextures[i] != None) {
-			UnloadTexture(Viewport(PlayerOwner.Player),DynamicTextures[i]);
+		if (VP != None && DynamicTextures[i] != None) {
+			UnloadTexture(VP,DynamicTextures[i]);
 		}
 	}
 	DynamicTextures.Remove(0,count);
@@ -831,6 +855,13 @@ function ChangeMiniMapDisplayMode()
 		Radius = 64;
 	}
 	bNeedLayoutUpdate = true;
+}
+
+event Destroyed()
+{
+    class'ObjectStore.UILifetime'.static.ReleaseMap(MinimapBlend,MinimapCombiner,AlphaScale,Self);
+    FlushDynamicTextures();
+    Super(CInterface).Destroyed();
 }
 
 defaultproperties

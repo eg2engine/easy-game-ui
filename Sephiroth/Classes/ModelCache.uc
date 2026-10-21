@@ -186,6 +186,7 @@ event ItemCacheProp(out int Index, out Actor Actor, string Name, optional float 
 	if (Attachment == None)
 		return;
 
+	Attachment.AttachmentSlots.Length = 0;
 	for (k=0;k<Model[Index].AttachmentSlots.Length;k++) {
 		Slot.Bone = Model[Index].AttachmentSlots[k].Bone;
 		Slot.Scale = Model[Index].AttachmentSlots[k].Scale;
@@ -198,7 +199,7 @@ event ItemCacheProp(out int Index, out Actor Actor, string Name, optional float 
 	Attachment.UpperOffset = Model[Index].UpperOffset;
 	Attachment.LowerOffset = Model[Index].LowerOffset;
 
-	if (Attachment.bTrackLocation && Attachment.MTClass != None)
+	if (Attachment.bTrackLocation && Attachment.MTClass != None && Attachment.MotionTrace == None)
 		Attachment.MotionTrace = new(Attachment) Attachment.MTClass;
 
 	Attachment.bAttachToBothHand = Model[Index].bAttachToBothHand;

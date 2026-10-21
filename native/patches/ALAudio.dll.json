@@ -1,0 +1,71 @@
+{
+  "format": 1,
+  "path": "Bin/ALAudio.dll",
+  "source_size": 95744,
+  "source_sha256": "269e8cfec4707ea10e3237c92e51e2414798bc56fc68eea5b61e505ed9706bb9",
+  "target_size": 96256,
+  "target_sha256": "67a7cda06e6380a336221b1d76babf358bc14b1a3fc2df7186262eb5586e32e9",
+  "replacements": [
+    {
+      "offset": 278,
+      "before": "05",
+      "after": "06"
+    },
+    {
+      "offset": 301,
+      "before": "98",
+      "after": "9a"
+    },
+    {
+      "offset": 353,
+      "before": "b0",
+      "after": "c0"
+    },
+    {
+      "offset": 360,
+      "before": "2c5a02",
+      "after": "74c101"
+    },
+    {
+      "offset": 720,
+      "before": "000000000000",
+      "after": "2e6166726565"
+    },
+    {
+      "offset": 728,
+      "before": "00",
+      "after": "2d"
+    },
+    {
+      "offset": 733,
+      "before": "0000",
+      "after": "b001"
+    },
+    {
+      "offset": 737,
+      "before": "00",
+      "after": "02"
+    },
+    {
+      "offset": 741,
+      "before": "0000",
+      "after": "7601"
+    },
+    {
+      "offset": 756,
+      "before": "00",
+      "after": "20"
+    },
+    {
+      "offset": 759,
+      "before": "00",
+      "after": "60"
+    },
+    {
+      "offset": 26738,
+      "before": "8b550c8b5a34",
+      "after": "e9893b010090"
+    }
+  ],
+  "append_zlib_base64": "eNqbk/CCAQgiG1+yb2Bk6O7k2cDA0M3ZzdjtwPG/9Mn/C4lzu0N5uqNMXnof+fefYRQMNwAAnG4TQg=="
+}

@@ -77,7 +77,7 @@ function PostBeginPlay()
 	Super.PostBeginPlay();
 	if ( bAnimate )
 		LoopAnim(BaseAnim,1,0);
-	if ( bTrackLocation && MTClass != None )
+	if ( bTrackLocation && MTClass != None && MotionTrace == None )
 		MotionTrace = new(Self) MTClass;
 
 	AppClassTag = 'Attachment';
@@ -107,79 +107,58 @@ function DestroyActionEffect()
 // 挂件销毁前停止并销毁黑金 Link，随后执行原清理。
 event Destroyed()
 {
-	local BlackGoldWeaponFxLink Link;
-	local array<BlackGoldWeaponFxLink> Links;
-	local int I;
-
-	foreach ChildActors(class'BlackGoldWeaponFxLink', Link)
-	{
-		Links.Length = Links.Length + 1;
-		Links[Links.Length - 1] = Link;
-	}
-	for (I = 0; I < Links.Length; I++)
-	{
-		Link = Links[I];
-		if (Link != None)
-		{
-			Link.StopWork();
-			if (!Link.bDeleteMe)
-				Link.Destroy();
-		}
-	}
-	Super.Destroyed();
-	if ( DivineEffect != None ) 
-	{
-		DivineEffect.Destroy();
-		DivineEffect = None;
-	}
-
-	if( AuraEffect != None )
-	{
-		AuraEffect.Destroy();
-		AuraEffect = None;
-		ForceEffect.Destroy();
-		ForceEffect = None;
-		SpecialForceEffect.Destroy();
-		SpecialForceEffect = None;
-		FourthEffect.Destroy();
-		FourthEffect = None;
-		FivethEffect.Destroy();
-		FivethEffect = None;
-	}
-
-	if ( GroundEffect != None ) 
-	{
-		GroundEffect.Destroy();
-		GroundEffect = None;
-	}
-	/*
-	if (Level.Game.IsA('GameManager')) {
-		for (i=0;i<GameManager(Level.Game).GroundItems.Length;i++) {
-			if (GameManager(Level.Game).GroundItems[i] == Self) {
-				GameManager(Level.Game).GroundItems.Remove(1, i);
-				break;
-			}
-		}
-	}
-	*/
+    local BlackGoldWeaponFxLink Link;
+    local array<BlackGoldWeaponFxLink> Links;
+    local int I;
+    local Actor Fx;
+    foreach ChildActors(class'BlackGoldWeaponFxLink', Link)
+    {
+        Links.Length = Links.Length + 1;
+        Links[Links.Length - 1] = Link;
+    }
+    for (I = 0; I < Links.Length; I++)
+    {
+        Link = Links[I];
+        if (Link != None && !Link.bDeleteMe)
+        {
+            Link.StopWork();
+            if (!Link.bDeleteMe) Link.Destroy();
+        }
+    }
+    Super.Destroyed();
+    Fx = DivineEffect;
+    DivineEffect = None;
+    if (Fx != None && !Fx.bDeleteMe) Fx.Destroy();
+    Fx = AuraEffect;
+    AuraEffect = None;
+    if (Fx != None && !Fx.bDeleteMe) Fx.Destroy();
+    Fx = ForceEffect;
+    ForceEffect = None;
+    if (Fx != None && !Fx.bDeleteMe) Fx.Destroy();
+    Fx = SpecialForceEffect;
+    SpecialForceEffect = None;
+    if (Fx != None && !Fx.bDeleteMe) Fx.Destroy();
+    Fx = FourthEffect;
+    FourthEffect = None;
+    if (Fx != None && !Fx.bDeleteMe) Fx.Destroy();
+    Fx = FivethEffect;
+    FivethEffect = None;
+    if (Fx != None && !Fx.bDeleteMe) Fx.Destroy();
+    Fx = GroundEffect;
+    GroundEffect = None;
+    if (Fx != None && !Fx.bDeleteMe) Fx.Destroy();
 }
 
 event LostChild(Actor Child)
 {
-	if ( Child == GroundEffect )
-		GroundEffect = None;
-	else if (Child == DivineEffect)
-		DivineEffect = None;
-	else if(Child == AuraEffect)
-	{
-		AuraEffect = None;
-		ForceEffect = None;
-		SpecialForceEffect = None;
-		FourthEffect = None;
-		FivethEffect = None;
-	}
-	else
-		Super.LostChild(Child);
+    if (Child == DivineEffect) DivineEffect = None;
+    if (Child == AuraEffect) AuraEffect = None;
+    if (Child == ForceEffect) ForceEffect = None;
+    if (Child == SpecialForceEffect) SpecialForceEffect = None;
+    if (Child == FourthEffect) FourthEffect = None;
+    if (Child == FivethEffect) FivethEffect = None;
+    if (Child == GroundEffect) GroundEffect = None;
+    Super.LostChild(Child);
 }
 
 event DisArmed(Pawn Owner)

@@ -1,0 +1,2011 @@
+{
+  "scope": "UCC isolated source validation; no connected-client test",
+  "initial_compilation": {
+    "total": 166,
+    "categories": {
+      "numeric_class_name": 96,
+      "shadowed_name": 1,
+      "unused_local": 68,
+      "missing_return": 1
+    },
+    "origins": {
+      "client_source": 154,
+      "validation_donor": 11,
+      "dependency_package": 1
+    },
+    "requires_review": 2
+  },
+  "recompiled": {
+    "total": 164,
+    "categories": {
+      "numeric_class_name": 96,
+      "unused_local": 68
+    },
+    "origins": {
+      "client_source": 152,
+      "validation_donor": 11,
+      "dependency_package": 1
+    },
+    "requires_review": 0
+  },
+  "bytecode_comparison": {
+    "parse_inline_segments": "same normalized instructions and jump targets, only local Tag renamed to InlineTag",
+    "instruction_tokens": 161,
+    "jump_targets": 9,
+    "actor_tag_not_written": true,
+    "disable_auto_attack": "existing normalized state writes and messages preserved; only explicit return/True/False tokens inserted",
+    "return_token_insertions": 6
+  },
+  "initial_warnings": [
+    {
+      "path": "SpecialFx/Classes/ZakaShotEF01.uc",
+      "line": 4,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "SyncValidation/Classes/Sync_CMainInterface_type2.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "validation_donor",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "SephirothUI/Classes/CGaugeInterface_type1.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "SephirothUI/Classes/CGaugeInterface_type2.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "SephirothUI/Classes/CCustomBrowser.uc",
+      "line": 539,
+      "message": "'Tag' obscures 'Tag' defined in base class 'Actor'.",
+      "origin": "client_source",
+      "category": "shadowed_name",
+      "requires_review": true,
+      "resolution": "fixed: local Tag renamed to InlineTag"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixBlade13.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixBlade14.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixBlade15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixBlade16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixBlade17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixBlade18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixBlade19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixBlade20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHM13.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHM14.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHM15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHM16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHM17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHM18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHM19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHM20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHF13.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHF14.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHF15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHF16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHF17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHF18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHF19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixJamadharHF20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStaff13.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStaff14.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStaff15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStaff16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStaff17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStaff18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStaff19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStaff20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixCrossbow13.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixCrossbow14.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixCrossbow15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixCrossbow16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixCrossbow17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixCrossbow18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixCrossbow19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixCrossbow20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStick13.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStick14.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStick15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStick16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStick17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStick18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStick19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/BellatrixStick20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumSword15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumSword16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumSword17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumSword18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumSword19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumSword20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHM15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHM16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHM17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHM18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHM19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHM20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHF15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHF16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHF17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHF18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHF19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumGauntletHF20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStaff15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStaff16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStaff17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStaff18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStaff19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStaff20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumBow15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumBow16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumBow17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumBow18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumBow19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumBow20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStick15.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStick16.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStick17.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStick18.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStick19.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "ItemFx/Classes/CloniumStick20.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "EnchantFx/Classes/FirecrackerClanBanner04.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "EnchantFx/Classes/FirecrackerClanBanner03.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "EnchantFx/Classes/FirecrackerClanBanner02.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "EnchantFx/Classes/FirecrackerClanBanner01.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "EnchantFx/Classes/E2009.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "SephirothUI/Classes/Macro_DropAll13.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "SephirothUI/Classes/Macro_Master160.uc",
+      "line": 1,
+      "message": "Class names shouldn't end in a digit",
+      "origin": "client_source",
+      "category": "numeric_class_name",
+      "requires_review": false,
+      "resolution": "reviewed: preserve externally referenced class name"
+    },
+    {
+      "path": "SephirothUI/Classes/SephirothController.uc",
+      "line": 2041,
+      "message": "'bCanAttack' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "bCanAttack",
+      "evidence": {
+        "function": "LockupBase.OnTick",
+        "declaration_line": 2044,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/SephirothController.uc",
+      "line": 1896,
+      "message": "'debugIsMove' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "debugIsMove",
+      "evidence": {
+        "function": "Standing.OnProbe",
+        "declaration_line": 1899,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/SephirothController.uc",
+      "line": 1731,
+      "message": "DisableAutoAttack: Missing return value",
+      "origin": "client_source",
+      "category": "missing_return",
+      "requires_review": true,
+      "resolution": "fixed: explicit True/False on every return path"
+    },
+    {
+      "path": "SyncValidation/Classes/Sync_SephirothController.uc",
+      "line": 873,
+      "message": "'debugIsMove' : unreferenced local variable",
+      "origin": "validation_donor",
+      "category": "unused_local",
+      "variable": "debugIsMove",
+      "evidence": {
+        "function": "Standing.OnProbe",
+        "declaration_line": 873,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/PlayerServerInfo.uc",
+      "line": 399,
+      "message": "'LangExt' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "LangExt",
+      "evidence": {
+        "function": "IsInGameShopBuyAble",
+        "declaration_line": 399,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/Creature.uc",
+      "line": 486,
+      "message": "'FinalTex' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "FinalTex",
+      "evidence": {
+        "function": "DeadTimer",
+        "declaration_line": 486,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/Hero.uc",
+      "line": 748,
+      "message": "'FaceName' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "FaceName",
+      "evidence": {
+        "function": "DisArmByTransformation",
+        "declaration_line": 748,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SpecialFx/Classes/BASIC_Levelup.uc",
+      "line": 14,
+      "message": "'HeroClass' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "HeroClass",
+      "evidence": {
+        "function": "PostBeginPlay",
+        "declaration_line": 14,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SpecialFx/Classes/JEF_MissonClear.uc",
+      "line": 6,
+      "message": "'HeroClass' : unreferenced local variable",
+      "origin": "dependency_package",
+      "category": "unused_local",
+      "variable": "HeroClass",
+      "evidence": {
+        "function": "PostBeginPlay",
+        "declaration_line": 6,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "line": 8276,
+      "message": "'nIndex' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "nIndex",
+      "evidence": {
+        "function": "DeleteQuestInfo",
+        "declaration_line": 8276,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "line": 4631,
+      "message": "'vDiff' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "vDiff",
+      "evidence": {
+        "function": "NetRecv_PlayerMove",
+        "declaration_line": 4631,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "line": 4632,
+      "message": "'Distance2D' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "Distance2D",
+      "evidence": {
+        "function": "NetRecv_PlayerMove",
+        "declaration_line": 4632,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "line": 4634,
+      "message": "'NewLocation' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "NewLocation",
+      "evidence": {
+        "function": "NetRecv_PlayerMove",
+        "declaration_line": 4634,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "line": 2124,
+      "message": "'Rot' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "Rot",
+      "evidence": {
+        "function": "FindNearestMonsterToAttack",
+        "declaration_line": 2124,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "line": 1237,
+      "message": "'DistToTarget' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "DistToTarget",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 1237,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "line": 1238,
+      "message": "'vDiff' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "vDiff",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 1238,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "line": 1239,
+      "message": "'DistanceMoved' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "DistanceMoved",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 1239,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "line": 1240,
+      "message": "'DestDiff' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "DestDiff",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 1240,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "line": 1241,
+      "message": "'DestDistance' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "DestDistance",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 1241,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/ClientController.uc",
+      "line": 1242,
+      "message": "'NewLocation' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "NewLocation",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 1242,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/SephirothPlayer.uc",
+      "line": 507,
+      "message": "'N' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "N",
+      "evidence": {
+        "function": "NetRecv_ResetMentorSystem",
+        "declaration_line": 507,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/SephirothPlayer.uc",
+      "line": 508,
+      "message": "'nCount' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "nCount",
+      "evidence": {
+        "function": "NetRecv_ResetMentorSystem",
+        "declaration_line": 508,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SyncValidation/Classes/Sync_ClientController.uc",
+      "line": 1883,
+      "message": "'vDiff' : unreferenced local variable",
+      "origin": "validation_donor",
+      "category": "unused_local",
+      "variable": "vDiff",
+      "evidence": {
+        "function": "NetRecv_PlayerMove",
+        "declaration_line": 1883,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SyncValidation/Classes/Sync_ClientController.uc",
+      "line": 1884,
+      "message": "'Distance2D' : unreferenced local variable",
+      "origin": "validation_donor",
+      "category": "unused_local",
+      "variable": "Distance2D",
+      "evidence": {
+        "function": "NetRecv_PlayerMove",
+        "declaration_line": 1884,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SyncValidation/Classes/Sync_ClientController.uc",
+      "line": 1886,
+      "message": "'NewLocation' : unreferenced local variable",
+      "origin": "validation_donor",
+      "category": "unused_local",
+      "variable": "NewLocation",
+      "evidence": {
+        "function": "NetRecv_PlayerMove",
+        "declaration_line": 1886,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SyncValidation/Classes/Sync_ClientController.uc",
+      "line": 242,
+      "message": "'DistToTarget' : unreferenced local variable",
+      "origin": "validation_donor",
+      "category": "unused_local",
+      "variable": "DistToTarget",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 242,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SyncValidation/Classes/Sync_ClientController.uc",
+      "line": 243,
+      "message": "'vDiff' : unreferenced local variable",
+      "origin": "validation_donor",
+      "category": "unused_local",
+      "variable": "vDiff",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 243,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SyncValidation/Classes/Sync_ClientController.uc",
+      "line": 244,
+      "message": "'DistanceMoved' : unreferenced local variable",
+      "origin": "validation_donor",
+      "category": "unused_local",
+      "variable": "DistanceMoved",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 244,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SyncValidation/Classes/Sync_ClientController.uc",
+      "line": 245,
+      "message": "'DestDiff' : unreferenced local variable",
+      "origin": "validation_donor",
+      "category": "unused_local",
+      "variable": "DestDiff",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 245,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SyncValidation/Classes/Sync_ClientController.uc",
+      "line": 246,
+      "message": "'DestDistance' : unreferenced local variable",
+      "origin": "validation_donor",
+      "category": "unused_local",
+      "variable": "DestDistance",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 246,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SyncValidation/Classes/Sync_ClientController.uc",
+      "line": 247,
+      "message": "'NewLocation' : unreferenced local variable",
+      "origin": "validation_donor",
+      "category": "unused_local",
+      "variable": "NewLocation",
+      "evidence": {
+        "function": "Approaching.PlayerMove",
+        "declaration_line": 247,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/PageAttack.uc",
+      "line": 344,
+      "message": "'nTemp' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "nTemp",
+      "evidence": {
+        "function": "OnPreRender",
+        "declaration_line": 344,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CPlayerEquip.uc",
+      "line": 300,
+      "message": "'i' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "i",
+      "evidence": {
+        "function": "DrawObject",
+        "declaration_line": 300,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CPlayerEquip.uc",
+      "line": 169,
+      "message": "'CompMyBox' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "CompMyBox",
+      "evidence": {
+        "function": "ShowItemInfo",
+        "declaration_line": 169,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CPlayerEquip.uc",
+      "line": 171,
+      "message": "'EquipPlaces' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "EquipPlaces",
+      "evidence": {
+        "function": "ShowItemInfo",
+        "declaration_line": 171,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CPlayerEquip.uc",
+      "line": 173,
+      "message": "'cnt' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "cnt",
+      "evidence": {
+        "function": "ShowItemInfo",
+        "declaration_line": 173,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CPlayerEquip.uc",
+      "line": 176,
+      "message": "'MyItems' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "MyItems",
+      "evidence": {
+        "function": "ShowItemInfo",
+        "declaration_line": 176,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CPlayerEquip.uc",
+      "line": 86,
+      "message": "'Item' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "Item",
+      "evidence": {
+        "function": "OnKeyEvent",
+        "declaration_line": 86,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CPlayerEquip.uc",
+      "line": 87,
+      "message": "'EquipPlace' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "EquipPlace",
+      "evidence": {
+        "function": "OnKeyEvent",
+        "declaration_line": 87,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "line": 858,
+      "message": "'j' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "j",
+      "evidence": {
+        "function": "Drop",
+        "declaration_line": 858,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "line": 858,
+      "message": "'k' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "k",
+      "evidence": {
+        "function": "Drop",
+        "declaration_line": 858,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "line": 859,
+      "message": "'ModelName' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "ModelName",
+      "evidence": {
+        "function": "Drop",
+        "declaration_line": 859,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "line": 863,
+      "message": "'SelectedNum' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "SelectedNum",
+      "evidence": {
+        "function": "Drop",
+        "declaration_line": 863,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "line": 71,
+      "message": "'XL' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "XL",
+      "evidence": {
+        "function": "DrawObject",
+        "declaration_line": 71,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "line": 73,
+      "message": "'j' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "j",
+      "evidence": {
+        "function": "DrawObject",
+        "declaration_line": 73,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "line": 73,
+      "message": "'k' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "k",
+      "evidence": {
+        "function": "DrawObject",
+        "declaration_line": 73,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "line": 78,
+      "message": "'ISI' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "ISI",
+      "evidence": {
+        "function": "DrawObject",
+        "declaration_line": 78,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "line": 79,
+      "message": "'ModelName' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "ModelName",
+      "evidence": {
+        "function": "DrawObject",
+        "declaration_line": 79,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CMainInterface_type2.uc",
+      "line": 81,
+      "message": "'LevelStr' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "LevelStr",
+      "evidence": {
+        "function": "DrawObject",
+        "declaration_line": 81,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CEquipment.uc",
+      "line": 326,
+      "message": "'Sprite' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "Sprite",
+      "evidence": {
+        "function": "RenderDropArea",
+        "declaration_line": 326,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CChannelManager.uc",
+      "line": 524,
+      "message": "'i' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "i",
+      "evidence": {
+        "function": "LoadClanIllegalText",
+        "declaration_line": 524,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CChannelManager.uc",
+      "line": 510,
+      "message": "'i' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "i",
+      "evidence": {
+        "function": "LoadIllegalText",
+        "declaration_line": 510,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/DissolveDiag.uc",
+      "line": 419,
+      "message": "'i' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "i",
+      "evidence": {
+        "function": "ResultDissolve",
+        "declaration_line": 419,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/DissolveDiag.uc",
+      "line": 369,
+      "message": "'SendItem' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "SendItem",
+      "evidence": {
+        "function": "SendDissolveItem",
+        "declaration_line": 369,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/DissolveDiag.uc",
+      "line": 304,
+      "message": "'strTypeName' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "strTypeName",
+      "evidence": {
+        "function": "SetConsumeItem",
+        "declaration_line": 304,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/DissolveDiag.uc",
+      "line": 275,
+      "message": "'Cmd' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "Cmd",
+      "evidence": {
+        "function": "NotifyInterface",
+        "declaration_line": 275,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/DissolveDiag.uc",
+      "line": 122,
+      "message": "'Sprite' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "Sprite",
+      "evidence": {
+        "function": "RenderDragging",
+        "declaration_line": 122,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CDepartment.uc",
+      "line": 433,
+      "message": "'strMoney' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "strMoney",
+      "evidence": {
+        "function": "NotifyEditBox",
+        "declaration_line": 433,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CItemInfoBox.uc",
+      "line": 524,
+      "message": "'nYear' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "nYear",
+      "evidence": {
+        "function": "AddAffixInfo",
+        "declaration_line": 524,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CItemInfoBox.uc",
+      "line": 524,
+      "message": "'nMonth' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "nMonth",
+      "evidence": {
+        "function": "AddAffixInfo",
+        "declaration_line": 524,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CItemInfoBox.uc",
+      "line": 524,
+      "message": "'nDay' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "nDay",
+      "evidence": {
+        "function": "AddAffixInfo",
+        "declaration_line": 524,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CItemInfoBox.uc",
+      "line": 524,
+      "message": "'nHour' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "nHour",
+      "evidence": {
+        "function": "AddAffixInfo",
+        "declaration_line": 524,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CItemInfoBox.uc",
+      "line": 524,
+      "message": "'nMin' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "nMin",
+      "evidence": {
+        "function": "AddAffixInfo",
+        "declaration_line": 524,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CItemInfoBox.uc",
+      "line": 525,
+      "message": "'sDays' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "sDays",
+      "evidence": {
+        "function": "AddAffixInfo",
+        "declaration_line": 525,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/CEtcInfo.uc",
+      "line": 143,
+      "message": "'textYL' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "textYL",
+      "evidence": {
+        "function": "OnPostRender",
+        "declaration_line": 143,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "SephirothUI/Classes/BuffIcon.uc",
+      "line": 130,
+      "message": "'A' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "A",
+      "evidence": {
+        "function": "OnPostRender",
+        "declaration_line": 130,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/WornItems.uc",
+      "line": 145,
+      "message": "'Dest' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "Dest",
+      "evidence": {
+        "function": "FindEquipAblePlace",
+        "declaration_line": 145,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/RandomBoxType.uc",
+      "line": 147,
+      "message": "'numRndRec' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "numRndRec",
+      "evidence": {
+        "function": "LoadResources",
+        "declaration_line": 147,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    },
+    {
+      "path": "Sephiroth/Classes/RandomBoxType.uc",
+      "line": 130,
+      "message": "'numRndRec' : unreferenced local variable",
+      "origin": "client_source",
+      "category": "unused_local",
+      "variable": "numRndRec",
+      "evidence": {
+        "function": "LoadRndBoxRec",
+        "declaration_line": 130,
+        "unqualified_occurrences": 1,
+        "declaration_only": true
+      },
+      "requires_review": false,
+      "resolution": "reviewed: declaration only, no active local reads or writes"
+    }
+  ]
+}

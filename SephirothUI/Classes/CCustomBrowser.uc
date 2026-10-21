@@ -536,7 +536,7 @@ function string JoinColumnTexts(array<string> Texts)
 function ParseInlineSegments(string Content, color BaseColor, out array<RichSegment> Segs)
 {
 	local int OpenPos, ClosePos;
-	local string Before, Tag, Rest;
+	local string Before, InlineTag, Rest;
 	local color CurColor;
 
 	// 解析 [Y]...[/] 形式的行内颜色切换
@@ -564,13 +564,13 @@ function ParseInlineSegments(string Content, color BaseColor, out array<RichSegm
 			break;
 		}
 
-		Tag = Left(Rest, ClosePos);
+		InlineTag = Left(Rest, ClosePos);
 		Content = Mid(Rest, ClosePos + 1);
 
-		if ( Tag == "/" )
+		if ( InlineTag == "/" )
 			CurColor = BaseColor;
 		else
-			CurColor = ColorFromTag(Tag, BaseColor);
+			CurColor = ColorFromTag(InlineTag, BaseColor);
 	}
 }
 

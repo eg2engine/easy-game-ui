@@ -24,10 +24,10 @@ function int GetPlayLevel()
 
 function PostBeginPlay()
 {
-	Super.PostBeginPlay();
+	Super(Character).PostBeginPlay();
 
 	if ( PatternInfo == None )
-		PatternInfo = new(None) class'Pattern';
+		PatternInfo = new(Self) class'ObjectStore.OwnedPattern';
 
 	if ( PatternInfo != None )
 		EffController.eState = PS_FINISHED;
@@ -35,6 +35,7 @@ function PostBeginPlay()
 	bPatternAnimating = false;
 
 	OldLocation = Location;
+    Disable('Tick');
 }
 
 
@@ -285,31 +286,15 @@ function PatternMessage()
 
 function Tick(float DeltaTime)
 {
-	local float fMonsterDist;
-	if ( PatternInfo.strKey == "" )
-		return;
-
-	if ( PatternInfo.strEffRes != "" )
-		PatternEffect();
-
-	if ( PatternInfo.strAniRes != '' )
-		PatternAnimation();
-
-	if ( PatternInfo.strSndRes != "" )
-		PatternSound();
-
-//	if ( PatternInfo.strMsgRes != "" )
-//		PatternMessage();
-
-	fMonsterDist = VSize(OldLocation - Location);
-
-	if(!bIsDead && fMonsterDist > 10.0f)
-	{
-		//Log("Position Error Monster"@self@MonsterServerInfo(ServerController(Controller).MSI).Fullname@"OLD Location"@OldLocation@"Current Location"@Location@fMonsterDist);
-	}
-
-	OldLocation = Location;
-
+    if (bDeleteMe || PatternInfo == None || PatternInfo.strKey == "")
+    { Disable('Tick'); return; }
+    if (EffController.eState != PS_FINISHED && PatternInfo.strEffRes != "" && PatternInfo.strEffRes != "None") PatternEffect();
+    if (AniController.eState != PS_FINISHED && PatternInfo.strAniRes != '') PatternAnimation();
+    if (SndController.eState != PS_FINISHED && PatternInfo.strSndRes != "" && PatternInfo.strSndRes != "None") PatternSound();
+    if ((EffController.eState == PS_FINISHED || PatternInfo.strEffRes == "" || PatternInfo.strEffRes == "None")
+        && (AniController.eState == PS_FINISHED || PatternInfo.strAniRes == '')
+        && (SndController.eState == PS_FINISHED || PatternInfo.strSndRes == "" || PatternInfo.strSndRes == "None"))
+        Disable('Tick');
 }
 
 

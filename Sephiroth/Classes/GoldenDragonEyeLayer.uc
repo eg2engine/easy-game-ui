@@ -5,7 +5,7 @@ var bool bStopping;
 simulated function InitializeLayer(StaticMesh Shape, Color Tint)
 {
     SetStaticMesh(Shape);
-    EyeMaterial=new(Self) class'ColorModifier';
+    if (EyeMaterial==None) EyeMaterial=new(Self) class'ObjectStore.OwnedColor';
     if (EyeMaterial!=None)
     {
         EyeMaterial.Material=Texture'Engine.WhiteTexture';
@@ -36,13 +36,16 @@ simulated event Tick(float DT)
 // 幂等地永久停止更新并清理所属资源；不在此函数内递归销毁自身。
 simulated function StopWork()
 {
+    local ColorModifier OldMaterial;
     if (bStopping)
         return;
     bStopping=True;
     Disable('Tick');
     bHidden=True;
     Skins[0]=Texture'Engine.WhiteTexture';
-    EyeMaterial=None;
+    Skins.Length=0;
+    OldMaterial=EyeMaterial; EyeMaterial=None;
+    class'ObjectStore.Lifetime'.static.ReleaseColor(OldMaterial,Self);
 }
 
 // 销毁时先停止所属增强或效果，再执行父类清理。
