@@ -6,6 +6,7 @@
 	[2004.2.8, jhjung]
 	- ������忡�� ��� �����̸� ����� �� �ֵ��� ������.
 */
+// 管理游戏界面和原生换线入口；线路显示名与连接地址保持同一菜单顺序。
 class SephirothInterface extends CDesktop
 	config(SephirothUI);
 
@@ -3794,103 +3795,60 @@ function NotifyInterface(CInterface Interface, EInterfaceNotifyType NotifyId, op
 	}
 }
 
-// 返回到游戏大厅（显示服务器选择框）
-// 弹出服务器选择对话框，让玩家选择要连接的大厅服务器
-// @param bForce: 是否强制显示选择框（true=强制，false=可选）
+// 在 UI 线程打开换线选择框；名称和地址按同一下标对应，由玩家确认目标。
+// bForce 保留原有禁止取消的含义。
 function GotoLobby(bool bForce)
 {
-	local CTextSelectBox ServerInfoBox;		// 服务器选择对话框
-	local string ServerGroup;				// 服务器组名称
-	local int ServerIndex;					// 当前服务器索引
-	local array<string> ServerIp;			// 服务器IP地址列表
-	local array<string> ServerSetNames;		// 服务器显示名称列表
-	local int i;							// 循环计数器
-	local string ServerName;				// 服务器显示名称（临时变量）
-
-	// 从游戏管理器获取服务器信息（服务器组、当前索引、IP列表）
-	SephirothGame(Level.Game).GetServerInfoEx(ServerGroup, ServerIndex, ServerIp);
-	
-	// 遍历所有服务器IP，生成显示名称列表
-	for ( i = 0;i < ServerIp.Length;i++ ) 
-	{
-		// 生成服务器显示名称：服务器组-服务器序号（例如："服务器组-1"）
-		ServerName = ServerGroup@Localize("Terms","Server","Sephiroth")$"-"$(i + 1);
-		
-		// 如果是当前连接的服务器，在名称后添加"(当前服务器)"标记
-		if ( i == ServerIndex )
-			ServerName = ServerName@"("$Localize("Terms","CurrentServerSet","Sephiroth")$")";
-		
-		// 将生成的名称添加到列表中
-		ServerSetNames[i] = ServerName;
-	}
-	
-	// 弹出服务器选择对话框
-	ServerInfoBox = class'CTextSelectBox'.Static.PopupTextSelectBox(Self, Localize("Information","GotoLobby","Sephiroth"), ServerSetNames, bForce);
-	
-	// 如果对话框创建成功，设置回调函数和默认选中项
-	if ( ServerInfoBox != None ) 
-	{
-		// 设置选择回调函数：当玩家选择服务器后，调用OnServerSelect函数
-		ServerInfoBox.OnSelectChoice = OnServerSelect;
-		// 设置默认选中的文本为当前服务器名称
-		ServerInfoBox.SelectedText = ServerSetNames[ServerIndex];
-		// 设置默认选中的索引为当前服务器索引
-		ServerInfoBox.SelectedTextIndex = ServerIndex;
-	}
+	ShowLobbyServerSelection(bForce, False);
 }
 
-
-// 直接返回到游戏大厅（显示服务器选择框并立即执行）
-// 与GotoLobby的区别：此函数会立即执行返回操作，不等待用户选择
-// @param bForce: 是否强制显示选择框（true=强制，false=可选）
+// 在 UI 线程打开相同选择框并请求返回当前线路；请求发出不代表已经完成换线。
+// 当前线路无法对应配置列表时保留人工选择，不猜测目标或自动跳转。
 function GotoLobbyDirect(bool bForce)
 {
-	local CTextSelectBox ServerInfoBox;		// 服务器选择对话框
-	local string ServerGroup;				// 服务器组名称
-	local int ServerIndex;					// 当前服务器索引
-	local array<string> ServerIp;			// 服务器IP地址列表
-	local array<string> ServerSetNames;		// 服务器显示名称列表
-	local int i;							// 循环计数器
-	local string ServerName;				// 服务器显示名称（临时变量）
+	ShowLobbyServerSelection(bForce, True);
+}
 
-	// 从游戏管理器获取服务器信息（服务器组、当前索引、IP列表）
-	SephirothGame(Level.Game).GetServerInfoEx(ServerGroup, ServerIndex, ServerIp);
-	
-	// 遍历所有服务器IP，生成显示名称列表
-	for ( i = 0;i < ServerIp.Length;i++ ) 
+// 统一构造两个换线入口的选择框和当前项；bDirect 仅在当前下标有效时沿原生流程发出请求。
+private function ShowLobbyServerSelection(bool bForce, bool bDirect)
+{
+	local SephirothGame Game;
+	local CTextSelectBox ServerInfoBox;
+	local int ServerIndex;
+	local array<string> ServerIp;
+	local array<string> ServerSetNames;
+
+	Game = SephirothGame(Level.Game);
+	if (Game == None)
+		return;
+	Game.GetServerSelectionInfo(ServerIndex, ServerIp, ServerSetNames);
+	if (ServerIp.Length == 0)
 	{
-		// 生成服务器显示名称：服务器组-服务器序号（例如："服务器组-1"）
-		ServerName = ServerGroup@Localize("Terms","Server","Sephiroth")$"-"$(i + 1);
-		
-		// 如果是当前连接的服务器，在名称后添加"(当前服务器)"标记
-		if ( i == ServerIndex )
-			ServerName = ServerName@"("$Localize("Terms","CurrentServerSet","Sephiroth")$")";
-		
-		// 将生成的名称添加到列表中
-		ServerSetNames[i] = ServerName;
+		Log("[ServerSelection] ServerSetInfo is empty; no destination available.");
+		return;
 	}
-	
-	// 弹出服务器选择对话框
-	ServerInfoBox = class'CTextSelectBox'.Static.PopupTextSelectBox(Self, Localize("Information","GotoLobby","Sephiroth"), ServerSetNames, bForce);
-	
-	// 如果对话框创建成功，设置回调函数和默认选中项
-	if ( ServerInfoBox != None ) 
+
+	// 未知线路不默认选择第一项，避免把服务端线路号错误映射成连接目标。
+	if (ServerIndex < 0)
+		Log("[ServerSelection] ServerSetID=" $ Game.ServerSetId $ " does not identify a configured menu item; select destination manually.");
+
+	ServerInfoBox = class'CTextSelectBox'.Static.PopupTextSelectBox(Self, Localize("Information", "GotoLobby", "Sephiroth"), ServerSetNames, bForce);
+	if (ServerInfoBox != None)
 	{
-		// 设置选择回调函数：当玩家选择服务器后，调用OnServerSelect函数
 		ServerInfoBox.OnSelectChoice = OnServerSelect;
-		// 设置默认选中的文本为当前服务器名称
-		ServerInfoBox.SelectedText = ServerSetNames[ServerIndex];
-		// 设置默认选中的索引为当前服务器索引
 		ServerInfoBox.SelectedTextIndex = ServerIndex;
+		if (ServerIndex >= 0)
+			ServerInfoBox.SelectedText = ServerSetNames[ServerIndex];
 	}
 
-	// 直接执行返回大厅操作（不等待用户选择）
-	// 执行控制台命令，通知引擎跳转到指定的大厅服务器
+	if (!bDirect)
+		return;
+	// Game 已将非法下标归一为 -1；直接入口不能读取越界地址或发送空目标。
+	if (ServerIndex < 0)
+		return;
+
 	PlayerOwner.ConsoleCommand("GotoLobbyEx"@ServerIp[ServerIndex]);
-	
-	// 如果玩家控制器是客户端控制器，发送网络通知
-	if( ClientController(PlayerOwner) != None )
-		// 通知服务器：客户端请求跳转到指定的大厅服务器地址
+	if (ClientController(PlayerOwner) != None)
 		ClientController(PlayerOwner).Net.NotiGotoLobbyEx(ServerIp[ServerIndex]);
 }
 
