@@ -1,3 +1,4 @@
+/** Nephilim 玩家控制器；保留既有远程攻击和精神召唤，召唤接管时取消普通远端待跳。 */
 class NephilimPlayer extends SephirothPlayer;
 
 var bool bFireComplete;
@@ -582,6 +583,8 @@ state SummonSpirit extends Navigating
 	 */
 	function BeginState()
 	{
+		// 召唤业务接管时丢弃普通同步，结束后不补播旧跳跃。
+		ResetRemoteCAMotion();
 		// 设置4秒定时器，如果4秒内没有完成召唤，自动返回导航状态
 		SetTimer(4, False);
 	}
@@ -827,6 +830,7 @@ function RangeHit_Detected(actor HitActor, vector HitLocation, string SkillName,
 	}
 }
 
+/** 在原业务线程处理弓手攻击通知；普通远端玩家按 CA 清理旧加速度，保留现有攻击、跳跃及特殊业务控制权。 */
 event NetRecv_ActRange(Skill Skill, Actor TargetActor, vector TargetLocation, float ActRatio, int ActPitch)
 {
 	local bool bIsMoving;
@@ -839,9 +843,11 @@ event NetRecv_ActRange(Skill Skill, Actor TargetActor, vector TargetLocation, fl
 			RotatePawnTo(TargetLocation);
 		ThisSkill = Skill;
 		Character(Pawn).bJustDamaged = False;  // by BK
-		// 只对本地玩家重置 Acceleration，其他玩家（第三视野）需要保持移动能力
+		// 保留原本地及非追赶处理；位置误差不代表仍在移动，普通远端追赶时也按 CA 清理旧加速度。
 		if ( Character(Pawn).IsAvatar() || !bIsMoving )
 			Pawn.Acceleration = vect(0,0,0); // by BK 
+		else
+			ClearRemoteCAAttackAcceleration();
 		Pull(ThisSkill, TargetActor, ActRatio);
 		GotoState('BowAttacking');
 	}

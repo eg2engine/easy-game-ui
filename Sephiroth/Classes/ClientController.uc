@@ -1,6 +1,7 @@
 /**
  * 客户端控制器类
  * 继承自PlayerController，负责处理客户端玩家的输入、移动、战斗、UI交互等核心功能
+ * 普通远端 Hero 在原业务线程消费 CA 运动目标；特殊状态、换角色及销毁时清除待处理运动。
  */
 class ClientController extends PlayerController native dependsOn(QuestStepInfo) config(User);
 
@@ -359,6 +360,155 @@ var float RemoteSkillDashLockEndTime;
 var vector RemoteSkillDashStartLocation;
 var vector RemoteSkillDashTargetLocation;
 
+// 仅追加脚本运动状态，保留现有 native 字段顺序；累计时间在目标消费或业务接管时清零。
+var float RemoteCADeltaTime;
+var int RemoteCAMotionType;
+
+/** 判断当前控制器是否持有有效的其他玩家 Hero；本地、怪物、宠物及失效对象不参与 CA 同步。 */
+function bool IsRemoteCAPlayer()
+{
+    if (bDeleteMe)
+        return False;
+    if (Pawn == None)
+        return False;
+    if (Pawn.bDeleteMe)
+        return False;
+    if (Hero(Pawn) == None)
+        return False;
+    if (Pawn.Controller != Self)
+        return False;
+    if (bIsPlayer)
+        return False;
+    if (Player != None)
+        return False;
+    if (Character(Pawn).IsAvatar())
+        return False;
+    if (PSI == None)
+        return False;
+    if (PSI.bDeleteMe)
+        return False;
+    return True;
+}
+
+/** 在原业务线程判断普通同步是否拥有运动控制权；特殊业务状态继续使用现有处理。 */
+private function bool CanApplyRemoteCAMotion()
+{
+    if (!IsRemoteCAPlayer())
+        return False;
+    if (!PSI.bIsAlive)
+        return False;
+    if (Character(Pawn).bIsDead)
+        return False;
+    if (IsRemoteHardControlActive())
+        return False;
+    if (IsRemoteSkillDashLockActive())
+        return False;
+    if (IsInState('Knockbacking'))
+        return False;
+    if (IsInState('JustDead'))
+        return False;
+    if (IsInState('BoothSelling'))
+        return False;
+    if (IsInState('WasBoothSelling'))
+        return False;
+    if (IsInState('BoothVisiting'))
+        return False;
+    if (IsInState('Modal'))
+        return False;
+    if (IsInState('SummonSpirit'))
+        return False;
+    return True;
+}
+
+/** 攻击收包或队列开始时在原业务线程清理普通远端玩家的旧加速度；特殊业务接管时不改写速度或运动状态。 */
+function ClearRemoteCAAttackAcceleration()
+{
+    // 与普通 CA 运动共用控制权判断，避免攻击回调清掉硬控、冲刺或特殊状态的业务加速度。
+    if (!CanApplyRemoteCAMotion())
+        return;
+    Pawn.Acceleration = vect(0,0,0);
+}
+
+/** 清除本控制器的待处理运动；不回写地速、位置或物理状态，避免覆盖原生收包结果。 */
+function ResetRemoteCAMotion()
+{
+    RemoteCADeltaTime = 0;
+    RemoteCAMotionType = 0;
+    // 本地及非目标对象保留原有同步标记；只有本轮目标角色接管时清除弓手移动状态。
+    if (IsRemoteCAPlayer())
+        bSyncingPosition = False;
+}
+
+/** 为现有弓手回调维护追赶状态；只更新业务标记，不改变 CA 速度公式或到达规则。 */
+private function UpdateRemoteCAMoving()
+{
+    local vector Direction;
+    local float CloseDistance;
+
+    if (!CanApplyRemoteCAMotion())
+    {
+        bSyncingPosition = False;
+        return;
+    }
+    Direction = Destination - Pawn.Location;
+    Direction.Z = 0;
+    CloseDistance = SyncCloseDistance;
+    if (CloseDistance == 0)
+        CloseDistance = 30;
+    bSyncingPosition = VSize(Direction) >= CloseDistance;
+}
+
+/** 已通过业务接管检查的入口在原业务线程登记目标；后到普通回调可覆盖尚未消费的跳跃。 */
+private function RecordRemoteCAMotion(vector Loc, vector Acc, bool bJump, float JumpZ)
+{
+    Destination = Loc;
+    RemoteCAMotionType = 1;
+    if (bJump)
+    {
+        Character(Pawn).bJustDamaged = False;
+        Pawn.Acceleration = Acc;
+        Pawn.JumpZ = JumpZ;
+        RemoteCAMotionType = 2;
+    }
+    UpdateRemoteCAMoving();
+}
+
+/** 在既有 PlayerMove 中消费目标：先建立三维速度再起跳；不表示位置或跳跃最终成功。 */
+private function PrepareRemoteCAMotion()
+{
+    local float Elapsed, NewGroundSpeed, OriginalGroundSpeed2D, NewAnimSpeed;
+    local vector OriginalVelocity, Direction, GroundDirection;
+
+    if (!CanApplyRemoteCAMotion())
+    {
+        ResetRemoteCAMotion();
+        return;
+    }
+    if (RemoteCADeltaTime != 0 && RemoteCAMotionType != 0)
+    {
+        Elapsed = RemoteCADeltaTime;
+        RemoteCADeltaTime = 0;
+        OriginalVelocity = Pawn.Velocity;
+        OriginalVelocity.Z = 0;
+        OriginalGroundSpeed2D = VSize(OriginalVelocity);
+        Direction = Destination - Pawn.Location;
+        GroundDirection = Direction;
+        GroundDirection.Z = 0;
+        // 顺序沿 CA：先限于当前地速，再保留已有水平速度；三维方向会重写 Z，不叠加 Main 保留 Z 算法。
+        NewGroundSpeed = VSize(GroundDirection) / Elapsed;
+        NewGroundSpeed = FMin(NewGroundSpeed, Pawn.GroundSpeed);
+        NewGroundSpeed = FMax(OriginalGroundSpeed2D, NewGroundSpeed);
+        Pawn.Velocity = NewGroundSpeed * Normal(Direction);
+        if (RemoteCAMotionType == 2)
+            Pawn.DoJump(True);
+        NewAnimSpeed = NewGroundSpeed / Pawn.Default.GroundSpeed;
+        Character(Pawn).AnimSpeed = FMax(1.0, NewAnimSpeed);
+        Character(Pawn).CurrentAnimSpeed = Character(Pawn).AnimSpeed;
+    }
+    RemoteCAMotionType = 0;
+    UpdateRemoteCAMoving();
+}
+
 function bool IsRemotePlayerPawn()
 {
 	return Pawn != None && Character(Pawn) != None && !Character(Pawn).IsAvatar();
@@ -412,6 +562,7 @@ function bool IsRemoteSkillDashLockActive()
 	return IsRemotePlayerPawn();
 }
 
+/** 为远端 Assault 登记目标和有界锁定时长；沿现有结束条件接管普通同步并取消待跳。 */
 function BeginRemoteSkillDashLock(string SkillName, vector TargetLoc, float LockTime)
 {
 	if ( !IsRemotePlayerPawn() || !IsRemoteDashSkillName(SkillName) || Pawn == None )
@@ -424,6 +575,8 @@ function BeginRemoteSkillDashLock(string SkillName, vector TargetLoc, float Lock
 	else if ( LockTime > 0.80 )
 		LockTime = 0.80;
 
+	// 冲刺业务接管后不补播之前收到的普通跳跃。
+	ResetRemoteCAMotion();
 	bRemoteSkillDashLocked = True;
 	RemoteSkillDashLockEndTime = Level.TimeSeconds + LockTime;
 	RemoteSkillDashStartLocation = Pawn.Location;
@@ -707,6 +860,9 @@ event OnItemAddAttrSelectOpen(string body);
  */
 function Landfloor(vector HitNormal)
 {
+    // CA 普通远端落地保留网络目标；本地及非目标对象继续使用原有落地规则。
+    if (IsRemoteCAPlayer())
+        return;
 	if( Pawn != None )
 		Destination = Pawn.Location;
 }
@@ -868,7 +1024,7 @@ function AddActionPool(string SkillName, character Target, vector TargetLoc, flo
 
 /**
  * 更新动作池
- * 从动作池中取出第一个动作并执行
+ * 在原业务线程从动作池中取出第一个动作并执行；普通远端玩家按 CA 清理旧加速度，保留现有技能冲刺登记顺序。
  */
 function UpdateActionPool()
 {
@@ -888,9 +1044,11 @@ function UpdateActionPool()
 			else
 				RotatePawnTo(ActionPool[0].TargetLocation);
 			bRotateToDesired = False;
-			// 只对本地玩家重置 Acceleration，其他玩家（第三视野）需要保持移动能力
+			// 本地沿用原处理；普通远端队列动作按 CA 清理旧加速度，特殊业务接管时保持原行为。
 			if ( Character(Pawn).IsAvatar() )
 				Pawn.Acceleration = vect(0,0,0);
+			else
+				ClearRemoteCAAttackAcceleration();
 			AttackSpeed = ActionPool[0].Speed;
 			// 根据技能类型执行不同的动作
 			if ( Skill.IsCombo() ) 
@@ -1180,81 +1338,90 @@ state Approaching extends PlayerWalking
 		// 如果不是玩家角色，处理动画和位置同步
 		if (PSI != None && !Character(Pawn).IsAvatar() && PSI.bIsAlive) 
 		{
-			// 检查位置同步状态
-			if ( bSyncingPosition && Pawn != None )
-			{
-				// 计算当前位置与目标位置的2D距离
-				vecTarget = Destination - Pawn.Location;
-				vecTarget.Z = 0;
-				DistToTarget = VSize(vecTarget);
+            if (IsRemoteCAPlayer())
+            {
+                PrepareRemoteCAMotion();
+            }
+            else
+            {
+                // 非目标对象保留旧同步处理；有效远端 Hero 不再运行倍速追赶与抬高防卡。
+                // 检查位置同步状态
+                if ( bSyncingPosition && Pawn != None )
+                {
+                    // 计算当前位置与目标位置的2D距离
+                    vecTarget = Destination - Pawn.Location;
+                    vecTarget.Z = 0;
+                    DistToTarget = VSize(vecTarget);
 				
-				// 如果接近目标位置，恢复正常速度
-				if ( DistToTarget < SyncCloseDistance && OriginalGroundSpeed > 0 )
-				{
-					Pawn.GroundSpeed = OriginalGroundSpeed;
-					bSyncingPosition = False;
-					OriginalGroundSpeed = 0;  // 重置，下次需要时重新保存
-				}
-			}
+                    // 如果接近目标位置，恢复正常速度
+                    if ( DistToTarget < SyncCloseDistance && OriginalGroundSpeed > 0 )
+                    {
+                        Pawn.GroundSpeed = OriginalGroundSpeed;
+                        bSyncingPosition = False;
+                        OriginalGroundSpeed = 0;  // 重置，下次需要时重新保存
+                    }
+                }
 			
-			// 卡地形检测和立即同步
-			if ( Pawn != None )
-			{
-				// 初始化阈值（如果未设置）
-				if ( StuckThreshold == 0 )
-					StuckThreshold = 50.0;
-				if ( StuckTimeLimit == 0 )
-					StuckTimeLimit = 0.3;
+                // 卡地形检测和立即同步
+                if ( Pawn != None )
+                {
+                    // 初始化阈值（如果未设置）
+                    if ( StuckThreshold == 0 )
+                        StuckThreshold = 50.0;
+                    if ( StuckTimeLimit == 0 )
+                        StuckTimeLimit = 0.3;
 				
-				// 计算从上次同步位置移动的距离
-				vDiff = Pawn.Location - LastSyncLocation;
-				vDiff.Z = 0;  // 只考虑2D距离
-				DistanceMoved = VSize(vDiff);
+                    // 计算从上次同步位置移动的距离
+                    vDiff = Pawn.Location - LastSyncLocation;
+                    vDiff.Z = 0;  // 只考虑2D距离
+                    DistanceMoved = VSize(vDiff);
 				
-				// 如果位置变化很小，但还在尝试移动（有加速度或Destination很远），可能卡住了
-				if ( DistanceMoved < StuckThreshold )
-				{
-					DestDiff = Destination - Pawn.Location;
-					DestDiff.Z = 0;
-					DestDistance = VSize(DestDiff);
+                    // 如果位置变化很小，但还在尝试移动（有加速度或Destination很远），可能卡住了
+                    if ( DistanceMoved < StuckThreshold )
+                    {
+                        DestDiff = Destination - Pawn.Location;
+                        DestDiff.Z = 0;
+                        DestDistance = VSize(DestDiff);
 					
-					// 如果目标距离较远但位置几乎没变，说明卡住了
-					if ( DestDistance > 500.0 )
-					{
-						StuckCheckTime += DeltaTime;
+                        // 如果目标距离较远但位置几乎没变，说明卡住了
+                        if ( DestDistance > 500.0 )
+                        {
+                            StuckCheckTime += DeltaTime;
 					
-						// 如果卡住时间超过限制，强制同步到服务器位置
-						if ( StuckCheckTime >= StuckTimeLimit )
-						{
-							//DebugLog("PlayerMove StuckCheckTime >= StuckTimeLimit:  "$StuckCheckTime);
-							NewLocation = Destination;
-							NewLocation.Z = Pawn.Location.Z + 100;  // 保持Z轴
-							Pawn.SetLocation(NewLocation);
-							//DebugLog("PlayerMove NewLocation: "$NewLocation);
-							// 重置检测
-							LastSyncLocation = Pawn.Location;
-							StuckCheckTime = 0;
-							bSyncingPosition = False;  // 停止加速同步
-							if ( OriginalGroundSpeed > 0 )
-							{
-								Pawn.GroundSpeed = OriginalGroundSpeed;
-								OriginalGroundSpeed = 0;
-							}
-						}
-					}
-					else
-					{
-						// 目标很近，重置卡住检测
-						StuckCheckTime = 0;
-					}
-				}
-				else
-				{
-					// 位置有明显变化，重置卡住检测
-					StuckCheckTime = 0;
-					LastSyncLocation = Pawn.Location;
-				}
-			}
+                            // 如果卡住时间超过限制，强制同步到服务器位置
+                            if ( StuckCheckTime >= StuckTimeLimit )
+                            {
+                                //DebugLog("PlayerMove StuckCheckTime >= StuckTimeLimit:  "$StuckCheckTime);
+                                NewLocation = Destination;
+                                NewLocation.Z = Pawn.Location.Z + 100;  // 保持Z轴
+                                Pawn.SetLocation(NewLocation);
+                                //DebugLog("PlayerMove NewLocation: "$NewLocation);
+                                // 重置检测
+                                LastSyncLocation = Pawn.Location;
+                                StuckCheckTime = 0;
+                                bSyncingPosition = False;  // 停止加速同步
+                                if ( OriginalGroundSpeed > 0 )
+                                {
+                                    Pawn.GroundSpeed = OriginalGroundSpeed;
+                                    OriginalGroundSpeed = 0;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // 目标很近，重置卡住检测
+                            StuckCheckTime = 0;
+                        }
+                    }
+                    else
+                    {
+                        // 位置有明显变化，重置卡住检测
+                        StuckCheckTime = 0;
+                        LastSyncLocation = Pawn.Location;
+                    }
+                }
+
+            }
 			
 			// 如果正在远程攻击或弓箭攻击且有加速度（正在移动），强制切换到行走动画
 			if (Hero(Pawn).IsBasicAnim(AnimSeq))
@@ -3082,6 +3249,8 @@ state Modal extends PlayerWalking
 	 */
 	function BeginState()
 	{
+		// 特殊业务状态取得控制权时立即清除普通同步，恢复后等待新消息。
+		ResetRemoteCAMotion();
 		Character(Pawn).CHAR_TweenToWaiting(0.3);
 	}
 	
@@ -3164,6 +3333,8 @@ function PostBeginPlay()
  */
 function Destroyed()
 {
+	// 对象销毁前清除待处理运动，不回写旧角色的位置或物理状态。
+	ResetRemoteCAMotion();
 	Super.Destroyed();
 
 	// 清空动作池
@@ -3354,6 +3525,8 @@ event PlayerCalcView(out actor ViewActor, out vector CameraLocation, out rotator
  */
 function Possess(Pawn aPawn)
 {
+	// 控制对象切换前丢弃旧目标与帧时，不能把上一角色的跳跃带给新 Pawn。
+	ResetRemoteCAMotion();
 	Super.Possess(aPawn);
 	GotoState('Navigating');
 	if ( Player != None ) 
@@ -3461,6 +3634,19 @@ function SetStamina(float DeltaTime)
  */
 function PlayerTick(float DeltaTime)
 {
+    // 沿 CA 累计自上次目标消费以来的帧时，特殊状态不积存待恢复的运动。
+    if (IsRemoteCAPlayer())
+    {
+        if (CanApplyRemoteCAMotion())
+            RemoteCADeltaTime += DeltaTime;
+        else
+            ResetRemoteCAMotion();
+    }
+    else
+    {
+        RemoteCADeltaTime = 0;
+        RemoteCAMotionType = 0;
+    }
 	// 更新冷却时间
 	if ( CoolTime > 0 )
 	{
@@ -3638,6 +3824,8 @@ state BoothSelling extends Approaching
 	 */
 	function BeginState()
 	{
+		// 特殊业务状态取得控制权时立即清除普通同步，恢复后等待新消息。
+		ResetRemoteCAMotion();
 		// 停止所有移动
 		Pawn.Velocity = vect(0,0,0);
 		Pawn.Acceleration = vect(0,0,0);
@@ -3884,6 +4072,8 @@ state BoothVisiting
 	 */
 	function BeginState()
 	{
+		// 特殊业务状态取得控制权时立即清除普通同步，恢复后等待新消息。
+		ResetRemoteCAMotion();
 		// 停止所有移动
 		Pawn.Velocity = vect(0,0,0);
 		Pawn.Acceleration = vect(0,0,0);
@@ -4023,6 +4213,8 @@ state JustDead
 	 */
 	function BeginState()
 	{
+		// 特殊业务状态取得控制权时立即清除普通同步，恢复后等待新消息。
+		ResetRemoteCAMotion();
 		// 调用玩家刚死亡回调
 		PlayerJustDead();
 		// 播放死亡动画
@@ -4097,6 +4289,8 @@ state JustDead
  */
 event NetRecv_Die(bool bVanished)
 {
+	// 死亡通知先取消待跳，再进入现有死亡流程。
+	ResetRemoteCAMotion();
 	GotoState('JustDead');
 }
 
@@ -4188,116 +4382,140 @@ event NetRecv_PlayerMove(vector Loc,rotator Rot,vector Acc,bool bJump,float Jump
 
 	if ( IsRemotePlayerPawn() && IsRemoteHardControlActive() )
 	{
+		ResetRemoteCAMotion();
 		SnapRemoteToServerLocation(Loc, True);
 		return;
 	}
 
 	if ( IsRemotePlayerPawn() && ShouldHoldRemoteSkillDashMove(Loc) )
-		return;
+    {
+        ResetRemoteCAMotion();
+        return;
+    }
 
-	// 如果服务器通知跳跃
-	if ( bJump ) 
-	{
-		Character(Pawn).bJustDamaged = False;  
-		Pawn.Acceleration = Acc;
-		Pawn.JumpZ = JumpZ;
-		Pawn.DoJump(True);
-	}
+    // 当前特殊状态仍由原业务接管；普通位置只更新观察目标，不跳出业务状态或登记待跳。
+    if (IsRemoteCAPlayer())
+    {
+        if (!CanApplyRemoteCAMotion())
+        {
+            ResetRemoteCAMotion();
+            Destination = Loc;
+            return;
+        }
+    }
 
-	// 位置同步加速追赶处理（仅用于其他玩家角色）
-	if ( Pawn != None && !Character(Pawn).IsAvatar() )
-	{
-		if ( SyncCloseDistance == 0 )
-			SyncCloseDistance = 30.0;
+    if (IsRemoteCAPlayer())
+    {
+        RecordRemoteCAMotion(Loc, Acc, bJump, JumpZ);
+    }
+    else
+    {
+        // 本地与非目标对象保持现有接收、起跳及同步语义。
+        // 如果服务器通知跳跃
+        if ( bJump )
+        {
+            Character(Pawn).bJustDamaged = False;
+            Pawn.Acceleration = Acc;
+            Pawn.JumpZ = JumpZ;
+            Pawn.DoJump(True);
+        }
 		
-		// 计算当前位置与服务器位置的2D距离
-		vDiff = Loc - Pawn.Location;
-		vDiff.Z = 0;
-		Distance2D = VSize(vDiff);
+        // 位置同步加速追赶处理（仅用于其他玩家角色）
+        if ( Pawn != None && !Character(Pawn).IsAvatar() )
+        {
+            if ( SyncCloseDistance == 0 )
+                SyncCloseDistance = 30.0;
 
-		/*
-		if ( IsRemotePvpStrictSync() && Distance2D > 1000.0 )
-		{
-			SnapRemoteToServerLocation(Loc, False);
-			Distance2D = 0.0;
-			SpeedMultiplier = 1.0;
-		} */
+            // 计算当前位置与服务器位置的2D距离
+            vDiff = Loc - Pawn.Location;
+            vDiff.Z = 0;
+            Distance2D = VSize(vDiff);
 		
-		//("NetRecv_PlayerMove Distance2D: "$Distance2D);
+            /*
+            if ( IsRemotePvpStrictSync() && Distance2D > 1000.0 )
+            {
+                SnapRemoteToServerLocation(Loc, False);
+                Distance2D = 0.0;
+                SpeedMultiplier = 1.0;
+            } */
 
-		// 根据距离设置速度倍数（分段线性加速）
-		if ( Distance2D > 3000.0 ) 
-		{
-			// 距离非常大，直接瞬移到服务器位置
-			NewLocation = Loc;
-			NewLocation.Z = Pawn.Location.Z;  // 保持Z轴
-			Pawn.SetLocation(NewLocation);
-			bSyncingPosition = False;
-			SpeedMultiplier = 1.0;
-		}
-		else if ( Distance2D > 2000.0 )
-		{
-			// 2000-3000: 10-20倍线性加速
-			// SpeedMultiplier = 10.0 + ((Distance2D - 2000.0) / 1000.0) * (20.0 - 10.0)
-			SpeedMultiplier = 10.0 + (Distance2D - 2000.0) / 1000.0 * 10.0;
-			bSyncingPosition = True;
-		}
-		else if ( Distance2D > 1000.0 )
-		{
-			// 1000-2000: 5-10倍线性加速
-			// SpeedMultiplier = 5.0 + ((Distance2D - 1000.0) / 1000.0) * (10.0 - 5.0)
-			SpeedMultiplier = 5.0 + (Distance2D - 1000.0) / 1000.0 * 5.0;
-			bSyncingPosition = True;
-		}
-		else if ( Distance2D > 500.0 )
-		{
-			// 500-1000: 3-5倍线性加速
-			// SpeedMultiplier = 3.0 + ((Distance2D - 500.0) / 500.0) * (5.0 - 3.0)
-			SpeedMultiplier = 3.0 + (Distance2D - 500.0) / 500.0 * 2.0;
-			bSyncingPosition = True;
-		}
-		else if ( Distance2D > 0.0 )
-		{
-			// 0-500: 1-3倍线性加速
-			// SpeedMultiplier = 1.0 + (Distance2D / 500.0) * (3.0 - 1.0)
-			SpeedMultiplier = 1.0 + Distance2D / 500.0 * 0.5;
-			bSyncingPosition = True;
-		}
-		else
-		{
-			SpeedMultiplier = 1.0;
-			bSyncingPosition = False;
-		}
+            //("NetRecv_PlayerMove Distance2D: "$Distance2D);
+
+            // 根据距离设置速度倍数（分段线性加速）
+            if ( Distance2D > 3000.0 )
+            {
+                // 距离非常大，直接瞬移到服务器位置
+                NewLocation = Loc;
+                NewLocation.Z = Pawn.Location.Z;  // 保持Z轴
+                Pawn.SetLocation(NewLocation);
+                bSyncingPosition = False;
+                SpeedMultiplier = 1.0;
+            }
+            else if ( Distance2D > 2000.0 )
+            {
+                // 2000-3000: 10-20倍线性加速
+                // SpeedMultiplier = 10.0 + ((Distance2D - 2000.0) / 1000.0) * (20.0 - 10.0)
+                SpeedMultiplier = 10.0 + (Distance2D - 2000.0) / 1000.0 * 10.0;
+                bSyncingPosition = True;
+            }
+            else if ( Distance2D > 1000.0 )
+            {
+                // 1000-2000: 5-10倍线性加速
+                // SpeedMultiplier = 5.0 + ((Distance2D - 1000.0) / 1000.0) * (10.0 - 5.0)
+                SpeedMultiplier = 5.0 + (Distance2D - 1000.0) / 1000.0 * 5.0;
+                bSyncingPosition = True;
+            }
+            else if ( Distance2D > 500.0 )
+            {
+                // 500-1000: 3-5倍线性加速
+                // SpeedMultiplier = 3.0 + ((Distance2D - 500.0) / 500.0) * (5.0 - 3.0)
+                SpeedMultiplier = 3.0 + (Distance2D - 500.0) / 500.0 * 2.0;
+                bSyncingPosition = True;
+            }
+            else if ( Distance2D > 0.0 )
+            {
+                // 0-500: 1-3倍线性加速
+                // SpeedMultiplier = 1.0 + (Distance2D / 500.0) * (3.0 - 1.0)
+                SpeedMultiplier = 1.0 + Distance2D / 500.0 * 0.5;
+                bSyncingPosition = True;
+            }
+            else
+            {
+                SpeedMultiplier = 1.0;
+                bSyncingPosition = False;
+            }
 
 
-		//DebugLog("NetRecv_PlayerMove SpeedMultiplier: "$SpeedMultiplier);
+            //DebugLog("NetRecv_PlayerMove SpeedMultiplier: "$SpeedMultiplier);
 		
-		// 保存原始速度（如果还没有保存）
-		if ( OriginalGroundSpeed == 0 && Character(Pawn).CurrentGroundSpeed > 0 )
-			OriginalGroundSpeed = Character(Pawn).CurrentGroundSpeed;
+            // 保存原始速度（如果还没有保存）
+            if ( OriginalGroundSpeed == 0 && Character(Pawn).CurrentGroundSpeed > 0 )
+                OriginalGroundSpeed = Character(Pawn).CurrentGroundSpeed;
 		
-		// 应用速度倍数
-		if ( bSyncingPosition && OriginalGroundSpeed > 0 )
-		{
-			SyncSpeedMultiplier = SpeedMultiplier;
-			Pawn.GroundSpeed = OriginalGroundSpeed * SpeedMultiplier;
-		}
-		else if ( !bSyncingPosition && OriginalGroundSpeed > 0 )
-		{
-			// 恢复正常速度
-			Pawn.GroundSpeed = OriginalGroundSpeed;
-			OriginalGroundSpeed = 0;  // 重置，下次需要时重新保存
-		}
+            // 应用速度倍数
+            if ( bSyncingPosition && OriginalGroundSpeed > 0 )
+            {
+                SyncSpeedMultiplier = SpeedMultiplier;
+                Pawn.GroundSpeed = OriginalGroundSpeed * SpeedMultiplier;
+            }
+            else if ( !bSyncingPosition && OriginalGroundSpeed > 0 )
+            {
+                // 恢复正常速度
+                Pawn.GroundSpeed = OriginalGroundSpeed;
+                OriginalGroundSpeed = 0;  // 重置，下次需要时重新保存
+            }
 		
-		// 更新上次同步位置，用于卡地形检测
-		LastSyncLocation = Pawn.Location;
-		StuckCheckTime = 0;  // 重置卡住检测时间
-	}
-	else
-	{
-		// 玩家自己，不使用同步加速
-		bSyncingPosition = False;
-	}
+            // 更新上次同步位置，用于卡地形检测
+            LastSyncLocation = Pawn.Location;
+            StuckCheckTime = 0;  // 重置卡住检测时间
+        }
+        else
+        {
+            // 玩家自己，不使用同步加速
+            bSyncingPosition = False;
+        }
+
+    }
 
 	// 根据当前状态处理移动
 	if ( IsInState('Attacking') ) 
@@ -6424,6 +6642,8 @@ state Knockbacking extends Navigating
 
 	function BeginState()
 	{
+		// 特殊业务状态取得控制权时立即清除普通同步，恢复后等待新消息。
+		ResetRemoteCAMotion();
 		// 状态开始时可以添加日志或特效
 	}
 

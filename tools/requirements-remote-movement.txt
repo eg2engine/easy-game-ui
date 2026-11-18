@@ -1,0 +1,5 @@
+pefile==2024.8.26
+keystone-engine==0.9.2
+unicorn==2.1.4
+# 真实 UCC 门禁互操作探针使用；不作为游戏客户端运行依赖。
+frida==17.26.2

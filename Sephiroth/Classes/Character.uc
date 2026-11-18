@@ -1,3 +1,4 @@
+/** 角色公共行为及动画入口；有效远端 Hero 的起跳成功判断和慢走缩放按 CA 处理。 */
 class Character extends Pawn
 	native
 	placeable;
@@ -526,12 +527,29 @@ function CHAR_TweenAnim(name Sequence, float Time, optional int Channel)
 	}
 }
 
+/** 普通远端玩家沿 CA 在父类成功后缩放慢走起跳并切空中姿态；本地和其他对象保持原行为。 */
 function bool DoJump(bool bUpdating)
 {
-	local bool result;
-	result = Super.DoJump(bUpdating);
-	CHAR_PlayInAir();
-	return result;
+    local bool result;
+    local ClientController CC;
+
+    result = Super.DoJump(bUpdating);
+    CC = ClientController(Controller);
+    if (CC != None)
+    {
+        if (CC.IsRemoteCAPlayer())
+        {
+            // 父类拒绝重复起跳等情况时，不用空中动画伪装一次成功跳跃。
+            if (!result)
+                return False;
+            if (bIsWalking)
+                Velocity.Z *= WalkingPct;
+            CHAR_PlayInAir();
+            return True;
+        }
+    }
+    CHAR_PlayInAir();
+    return result;
 }
 
 function ChangeAnimation()
