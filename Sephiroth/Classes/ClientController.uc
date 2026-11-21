@@ -363,6 +363,12 @@ var vector RemoteSkillDashTargetLocation;
 // 仅追加脚本运动状态，保留现有 native 字段顺序；累计时间在目标消费或业务接管时清零。
 var float RemoteCADeltaTime;
 var int RemoteCAMotionType;
+// 大误差定位失败时限制重试频率；仅在收到最新普通运动目标时尝试。
+var float RemoteCASnapRetryTime;
+// 位置偏差诊断声明保留以兼容已有布局；生产候选默认关闭且不接入收包入口。
+var config bool bRemoteCAMoveLog;
+var config int RemoteCAMoveLogPanID;
+var float RemoteCAMoveLogNextTime;
 
 /** 判断当前控制器是否持有有效的其他玩家 Hero；本地、怪物、宠物及失效对象不参与 CA 同步。 */
 function bool IsRemoteCAPlayer()
@@ -434,6 +440,7 @@ function ResetRemoteCAMotion()
 {
     RemoteCADeltaTime = 0;
     RemoteCAMotionType = 0;
+    RemoteCASnapRetryTime = 0;
     // 本地及非目标对象保留原有同步标记；只有本轮目标角色接管时清除弓手移动状态。
     if (IsRemoteCAPlayer())
         bSyncingPosition = False;
@@ -458,9 +465,75 @@ private function UpdateRemoteCAMoving()
     bSyncingPosition = VSize(Direction) >= CloseDistance;
 }
 
-/** 已通过业务接管检查的入口在原业务线程登记目标；后到普通回调可覆盖尚未消费的跳跃。 */
+/** 在移动通知入口记录脚本纠偏前的位置差；每角色最多每 0.5 秒输出一次，仅观测最新收包目标，不代表网络延迟毫秒。 */
+private function LogRemoteCAMoveDifference(vector Loc, bool bJump)
+{
+    local ClientController LocalController;
+    local vector Difference;
+    local float DistanceXY;
+
+    if (!bRemoteCAMoveLog)
+        return;
+    if (!IsRemoteCAPlayer())
+        return;
+    if (RemoteCAMoveLogPanID != 0 && PSI.PanID != RemoteCAMoveLogPanID)
+        return;
+    if (Level.TimeSeconds < RemoteCAMoveLogNextTime)
+        return;
+    LocalController = ClientController(Level.GetLocalPlayerController());
+    if (LocalController == None)
+        return;
+    if (LocalController.myHud == None)
+        return;
+
+    // 原生处理可能先于脚本入口；此处只保证早于本脚本的硬控定位和大误差拉回，不声称覆盖所有网络包。
+    Difference = Loc - Pawn.Location;
+    Difference.Z = 0;
+    DistanceXY = VSize(Difference);
+    RemoteCAMoveLogNextTime = Level.TimeSeconds + 0.5;
+    // 原始坐标使用 UE 单位；diffMap 除以 100，与小地图坐标距离同单位，snapLimitMap 为当前阈值。
+    DebugLog("[RemoteMove] name=" $ string(PSI.PlayName) $ " id=" $ PSI.PanID
+        $ " t=" $ Level.TimeSeconds $ " clientUE=" $ string(Pawn.Location)
+        $ " serverUE=" $ string(Loc) $ " diffXY=" $ DistanceXY
+        $ " diffMap=" $ (DistanceXY / 100.0) $ " deltaZ=" $ (Loc.Z - Pawn.Location.Z)
+        $ " jump=" $ bJump $ " phys=" $ string(Pawn.Physics)
+        $ " state=" $ string(GetStateName()) $ " snapLimitMap=10");
+}
+
+/** 在原业务线程纠正普通远端超过 1000 UE 单位（小地图坐标 10）的 XY 误差；保持当前高度，定位失败不清理运动并间隔 0.3 秒重试。 */
+private function CorrectRemoteCALargeError(vector Loc)
+{
+    local vector Difference, NewLocation;
+
+    // 只纠正普通运动拥有控制权的有效远端，避免抢占硬控、冲刺及生命周期业务。
+    if (!CanApplyRemoteCAMotion())
+        return;
+    Difference = Loc - Pawn.Location;
+    Difference.Z = 0;
+    if (VSize(Difference) <= 1000.0)
+        return;
+    if (Level.TimeSeconds < RemoteCASnapRetryTime)
+        return;
+
+    // 不沿用旧防卡的 Z+100；空中也只纠正水平位置，不在这里改变物理模式或起跳。
+    NewLocation = Loc;
+    NewLocation.Z = Pawn.Location.Z;
+    RemoteCASnapRetryTime = Level.TimeSeconds + 0.3;
+    if (!Pawn.SetLocation(NewLocation))
+        return;
+
+    // 成功后清除旧水平动量，保留垂直速度及本轮累计帧时，避免同帧跳包因时间清零被跳过。
+    // 调用方紧接着覆盖目标和运动类型，本次消息继续沿既有 CA 流程消费。
+    Pawn.Velocity.X = 0;
+    Pawn.Velocity.Y = 0;
+    Pawn.Acceleration.X = 0;
+    Pawn.Acceleration.Y = 0;
+}
+
+/** 已通过业务接管检查的入口在原业务线程纠正大误差并登记最新目标；后到普通回调可覆盖尚未消费的跳跃。 */
 private function RecordRemoteCAMotion(vector Loc, vector Acc, bool bJump, float JumpZ)
 {
+    CorrectRemoteCALargeError(Loc);
     Destination = Loc;
     RemoteCAMotionType = 1;
     if (bJump)
@@ -4372,6 +4445,8 @@ event NetRecv_PlayerMove(vector Loc,rotator Rot,vector Acc,bool bJump,float Jump
 	LastServerMoveTime = Level.TimeSeconds;
 	SpeedMultiplier = 1.0;
 
+    // 生产候选停用位置偏差日志，不受旧 User.ini 中诊断开关影响。
+
 	// 设置期望旋转
 	DesiredRotation = Rot;
 	// 更新Pawn的旋转（只更新偏航角）
@@ -7739,6 +7814,8 @@ exec function BGFXStatus()
 
 defaultproperties
 {
+    bRemoteCAMoveLog=False
+    RemoteCAMoveLogPanID=0
 	MaxCameraDist=24
 	MinCameraDist=4
 	CameraHeight=44

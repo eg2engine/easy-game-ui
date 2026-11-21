@@ -45,7 +45,7 @@ def main():
     classes.mkdir(parents=True, exist_ok=False)
     source = (ROOT/'Sephiroth/Classes/ClientController.uc').read_text('utf-8')
     names = ['IsRemoteCAPlayer', 'CanApplyRemoteCAMotion', 'ClearRemoteCAAttackAcceleration', 'ResetRemoteCAMotion',
-             'UpdateRemoteCAMoving', 'RecordRemoteCAMotion', 'PrepareRemoteCAMotion',
+             'UpdateRemoteCAMoving', 'CorrectRemoteCALargeError', 'RecordRemoteCAMotion', 'PrepareRemoteCAMotion',
              'IsRemotePlayerPawn', 'IsRemoteHardControlActive', 'IsRemoteSkillDashLockActive']
     methods = '\n\n'.join(extract(source, name) for name in names)
     # 只替换原生类型边界及状态查询，运算、待跳覆盖、步进和清理代码原样执行。
@@ -59,7 +59,7 @@ var InfoStub PSI;
 var ClockStub Level;
 var Object Player;
 var bool bDeleteMe, bIsPlayer, bSyncingPosition, bRemoteSkillDashLocked;
-var float RemoteCADeltaTime, RemoteSkillDashLockEndTime, SyncCloseDistance;
+var float RemoteCADeltaTime, RemoteSkillDashLockEndTime, SyncCloseDistance, RemoteCASnapRetryTime;
 var int RemoteCAMotionType;
 var vector Destination;
 var vector CurrentVelocity, CurrentAcceleration;
@@ -291,10 +291,92 @@ function int Verify()
     Check(Pawn.DoJump(True) && Pawn.Velocity.Z == 600, "local_walk_unchanged");
     Pawn.AnimSequence = '';
     Check(!Pawn.DoJump(True) && Pawn.TweenCalls == 2, "local_failed_jump_animation_unchanged");
+    VerifyLargeError();
     Log("CA_REMOTE_VM_RESULT checks=" $ Checks $ " failures=" $ Failures);
     return Failures;
 }
 '''
+    driver += """
+/** 核对阈值、水平拉回、碰撞拒绝重试及特殊状态边界；真实地形另行验证。 */
+function VerifyLargeError()
+{
+    Init();
+    Pawn.Location = vect(10,20,80);
+    RecordRemoteCAMotion(vect(1010,20,9000), vect(0,0,0), False, 0);
+    Check(Pawn.SetLocationCalls == 0, "snap_exact_1000_excluded");
+    RecordRemoteCAMotion(vect(10,20,10000), vect(0,0,0), False, 0);
+    Check(Pawn.SetLocationCalls == 0, "snap_height_only_excluded");
+    Pawn.Velocity = vect(400,50,-200);
+    Pawn.Acceleration = vect(100,20,7);
+    RemoteCADeltaTime = 0.1;
+    RecordRemoteCAMotion(vect(1011,20,9000), vect(0,0,0), False, 0);
+    Check(Pawn.Location == vect(1011,20,80), "snap_xy_preserves_height");
+    Check(Pawn.Velocity == vect(0,0,-200) && Pawn.Acceleration == vect(0,0,7), "snap_clears_horizontal_momentum_only");
+    Check(Pawn.Physics == 1 && Pawn.JumpCalls == 0, "snap_keeps_physics_no_jump");
+    Check(Destination == vect(1011,20,9000) && RemoteCAMotionType == 1 && RemoteCADeltaTime == 0.1, "snap_records_latest_sample");
+    PrepareRemoteCAMotion();
+    Check(Pawn.Velocity.X == 0 && Pawn.Velocity.Y == 0, "snap_no_old_horizontal_rebound");
+
+    Init();
+    Pawn.Location.Z = 80;
+    Pawn.Physics = 2;
+    Pawn.Velocity.Z = -200;
+    RecordRemoteCAMotion(vect(0,1001,1000), vect(0,0,0), False, 0);
+    Check(Pawn.Location == vect(0,1001,80) && Pawn.Velocity.Z == -200 && Pawn.Physics == 2, "snap_falling_preserves_height_and_physics");
+
+    Init();
+    RemoteCADeltaTime = 0.1;
+    RecordRemoteCAMotion(vect(1001,0,0), vect(120,0,0), True, 700);
+    Check(RemoteCAMotionType == 2 && Pawn.JumpZ == 700 && Pawn.Acceleration.X == 120, "snap_keeps_current_jump_request");
+    PrepareRemoteCAMotion();
+    Check(Pawn.JumpCalls == 1 && Pawn.Velocity.Z == 700, "snap_current_jump_consumed_once");
+    PrepareRemoteCAMotion();
+    Check(Pawn.JumpCalls == 1, "snap_no_jump_replay");
+
+    Init();
+    Pawn.bRejectLocation = True;
+    Pawn.Velocity = vect(400,50,-200);
+    Pawn.Acceleration = vect(100,20,7);
+    RecordRemoteCAMotion(vect(4000,0,0), vect(0,0,0), False, 0);
+    Check(Pawn.Location == vect(0,0,0) && Pawn.Velocity == vect(400,50,-200) && Pawn.Acceleration == vect(100,20,7), "snap_failure_keeps_motion");
+    Check(Destination == vect(4000,0,0) && RemoteCAMotionType == 1, "snap_failure_keeps_latest_target");
+    Level.TimeSeconds = 10.1;
+    RecordRemoteCAMotion(vect(4100,0,0), vect(0,0,0), False, 0);
+    Check(Pawn.SetLocationCalls == 1 && Destination.X == 4100, "snap_failure_throttled_latest_target_updated");
+    Level.TimeSeconds = 10.31;
+    Pawn.bRejectLocation = False;
+    RecordRemoteCAMotion(vect(4200,0,0), vect(0,0,0), False, 0);
+    Check(Pawn.SetLocationCalls == 2 && Pawn.Location.X == 4200, "snap_retry_uses_latest_target");
+    ResetRemoteCAMotion();
+    Check(RemoteCASnapRetryTime == 0, "snap_reset_clears_retry_deadline");
+
+    Init();
+    PSI.bHardControl = True;
+    CorrectRemoteCALargeError(vect(4000,0,0));
+    PSI.bHardControl = False;
+    bRemoteSkillDashLocked = True;
+    RemoteSkillDashLockEndTime = 11;
+    CorrectRemoteCALargeError(vect(4000,0,0));
+    bRemoteSkillDashLocked = False;
+    TestState = 'Knockbacking';
+    CorrectRemoteCALargeError(vect(4000,0,0));
+    TestState = 'JustDead';
+    CorrectRemoteCALargeError(vect(4000,0,0));
+    TestState = 'Navigating';
+    PSI.bIsAlive = False;
+    CorrectRemoteCALargeError(vect(4000,0,0));
+    PSI.bIsAlive = True;
+    bIsPlayer = True;
+    CorrectRemoteCALargeError(vect(4000,0,0));
+    bIsPlayer = False;
+    Pawn.bHero = False;
+    CorrectRemoteCALargeError(vect(4000,0,0));
+    Check(Pawn.SetLocationCalls == 0, "snap_respects_business_and_identity_boundaries");
+    Pawn = None;
+    CorrectRemoteCALargeError(vect(4000,0,0));
+    Check(Pawn == None, "snap_missing_pawn_safe");
+}
+"""
     ca_hash = None
     if args.ca_controller:
         import hashlib
@@ -363,8 +445,18 @@ var Object Controller;
 var bool bDeleteMe, bHero, bAvatar, bIsDead, bIsWalking, bJustDamaged;
 var vector Location, Velocity, Acceleration;
 var float GroundSpeed, JumpZ, WalkingPct, AnimSpeed, CurrentAnimSpeed, HorizontalAtJump, TweenTime;
-var int JumpCalls, Physics, TweenCalls;
+var int JumpCalls, Physics, TweenCalls, SetLocationCalls;
+var bool bRejectLocation;
 var name AnimSequence, BasicAnim[5];
+/** 记录定位尝试，按测试设置模拟碰撞拒绝；不模拟真实地图。 */
+function bool SetLocation(vector Value)
+{
+    SetLocationCalls++;
+    if (bRejectLocation)
+        return False;
+    Location = Value;
+    return True;
+}
 /** 返回受控的本地身份。 */
 function bool IsAvatar() { return bAvatar; }
 /** 替代父类物理跳跃；真实地图和原生碰撞不在测试范围。 */
